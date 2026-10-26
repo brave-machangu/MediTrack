@@ -144,7 +144,6 @@
   display: inline-flex;
   align-items: center;
   min-height: var(--target-min);
-  overflow-wrap: anywhere;
 }
 
 .chevronOpen {
