@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import type { UserEvent } from '@testing-library/user-event'
 import { http } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -55,6 +55,29 @@ describe('Schedules with recorded doses', () => {
 
     expect(await screen.findByText(copy.endDate.saved)).toBeInTheDocument()
     expect(within(alpha()).getByText(copy.schedule.fromTo('1 October', '30 November'))).toBeInTheDocument()
+  })
+
+  it("fills in the default end date when the patient's today arrives after the form opened", async () => {
+    let release = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    // Held back, then passed on to the usual handler.
+    server.use(
+      http.get('/api/v1/patients/:patientId/doses', async () => {
+        await gate
+      }),
+    )
+    const { user } = await renderMedications()
+    const form = await open(user, copy.schedule.changeEnd, copy.endDate.title)
+    expect(within(form).getByLabelText(copy.endDate.label)).toHaveValue('')
+
+    release()
+
+    await waitFor(() => {
+      const reopened = screen.getByRole('form', { name: copy.endDate.title })
+      expect(within(reopened).getByLabelText(copy.endDate.label)).toHaveValue('2026-10-26')
+    })
   })
 
   it('shows the reason next to the field when the server refuses an end date (AC-06)', async () => {

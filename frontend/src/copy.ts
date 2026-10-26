@@ -273,6 +273,7 @@ export const copy = {
     show: 'Show summary',
     adherence: 'Adherence',
     adherenceExplain: 'Doses recorded as taken, out of all doses taken, skipped or missed.',
+    percent: (value: string) => `${value}%`,
     noScore: 'No doses to score yet',
     noScoreExplain: 'Adherence is shown once a dose is taken, skipped or missed.',
     tableCaption: (date: string) => `Doses on ${date}`,

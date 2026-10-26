@@ -37,6 +37,16 @@ test('missed dose recorded late at 375 px', async ({ page }) => {
   await sunday.getByRole('article').screenshot({ path: 'screenshots/out/missed-recorded-375.png' })
 })
 
+// Dates (DESIGN.md §4.6): errors next to the fields plus a summary, before anything is sent.
+test('missed dates with errors at 375 px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  await page.getByLabel('From').fill('2026-09-01')
+  await page.getByRole('button', { name: 'Show missed doses' }).click()
+  await expect(page.getByRole('group', { name: 'There is a problem' })).toBeFocused()
+  await page.locator('form').screenshot({ path: 'screenshots/out/missed-dates-errors-375.png' })
+})
+
 // WCAG 1.4.10: at 320 CSS px (1280 px at 400% zoom) nothing may need horizontal scrolling.
 test('missed doses reflow at 320 px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 })

@@ -3,6 +3,7 @@ import { problem } from './handlers'
 
 const todayDoses = '/api/v1/patients/:patientId/doses'
 const missedDoses = '/api/v1/patients/:patientId/missed-doses'
+const dailySummary = '/api/v1/patients/:patientId/adherence/daily'
 const doseLogs = '/api/v1/dose-logs'
 const medications = '/api/v1/patients/:patientId/medications'
 const patientList = '/api/v1/patients'
@@ -25,6 +26,12 @@ export const scenarios: Record<string, () => RequestHandler[]> = {
     }),
   ],
   'missed-error': () => [http.get(missedDoses, outage)],
+  'summary-loading': () => [
+    http.get(dailySummary, async () => {
+      await delay('infinite')
+    }),
+  ],
+  'summary-error': () => [http.get(dailySummary, outage)],
   'record-slow': () => [
     http.post(doseLogs, async () => {
       await delay('infinite')
