@@ -23,5 +23,7 @@ export default defineConfig(({ mode }) => ({
     // Patient dates must never depend on the machine's timezone (AC-35).
     env: { TZ: 'Asia/Tokyo' },
     restoreMocks: true,
+    // See src/test/setup.ts: a cold first test can take several seconds on a busy machine.
+    testTimeout: 15_000,
   },
 }))

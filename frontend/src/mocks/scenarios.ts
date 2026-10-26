@@ -2,6 +2,8 @@ import { delay, http, type RequestHandler } from 'msw'
 import { problem } from './handlers'
 
 const todayDoses = '/api/v1/patients/:patientId/doses'
+const doseLogs = '/api/v1/dose-logs'
+const medications = '/api/v1/patients/:patientId/medications'
 const outage = () => problem(503, 'SERVICE_UNAVAILABLE', 'Service unavailable')
 
 /**
@@ -15,6 +17,18 @@ export const scenarios: Record<string, () => RequestHandler[]> = {
     }),
   ],
   'today-error': () => [http.get(todayDoses, outage)],
+  'record-slow': () => [
+    http.post(doseLogs, async () => {
+      await delay('infinite')
+    }),
+  ],
+  'record-error': () => [http.post(doseLogs, () => problem(500, 'INTERNAL_ERROR', 'Internal error'))],
+  'medications-loading': () => [
+    http.get(medications, async () => {
+      await delay('infinite')
+    }),
+  ],
+  'medications-error': () => [http.get(medications, outage)],
   // The first load works and later ones fail, which leaves stale data on screen.
   'today-stale': () => {
     let calls = 0

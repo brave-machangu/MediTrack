@@ -59,7 +59,7 @@ export function TodayPage() {
             {refresh.announced ? copy.today.refreshed : ''}
           </p>
         </div>
-        <DoseGroups key={refresh.generation} doses={doses} timeZone={timezone} at={at} />
+        <DoseGroups key={refresh.generation} doses={doses} patientId={patientId} timeZone={timezone} at={at} />
       </>
     )
   }

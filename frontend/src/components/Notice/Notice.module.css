@@ -39,3 +39,26 @@
 .error .icon {
   color: var(--color-danger);
 }
+
+.info {
+  border-left-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.info .icon {
+  color: var(--color-accent);
+}
+
+/* A 32-character trace ID must wrap on a 320 px screen. */
+.reference {
+  overflow-wrap: anywhere;
+}
+
+.success {
+  border-left-color: var(--color-success);
+  background: var(--color-success-subtle);
+}
+
+.success .icon {
+  color: var(--color-success);
+}
