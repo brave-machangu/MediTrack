@@ -1,0 +1,77 @@
+# Local stack (MT-030, OPS-01): `make up` builds and starts it; `make down` stops it and keeps the data.
+#   db → migrate (one-shot) → backend → frontend (nginx, http://localhost:8080)
+#   observability: all-in-one Grafana + OTel collector, Grafana at http://localhost:3000
+# Only commands and variables published in backend/README.md and frontend/README.md are used.
+# Images are pinned by digest, each version at least two weeks old (docs/security.md §4).
+name: meditrack
+
+x-backend: &backend
+  build:
+    context: ./backend
+    args:
+      GIT_SHA: ${GIT_SHA:-dev}
+  image: meditrack-backend:local
+  environment:
+    DATABASE_URL: postgresql+psycopg://meditrack:${POSTGRES_PASSWORD:?copy .env.example to .env}@db:5432/meditrack
+    MEDITRACK_ENV: local
+
+services:
+  db:
+    image: postgres:16.14@sha256:95206741a5b214807675e14165369d05b93a9cf692223b616d07cca227e74b0b
+    environment:
+      POSTGRES_DB: meditrack
+      POSTGRES_USER: meditrack
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meditrack -d meditrack"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # Migrations are their own step, before the app starts (backend/README.md, operations.md §5.1).
+  migrate:
+    <<: *backend
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    <<: *backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    image: meditrack-frontend:local
+    ports:
+      - "8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # grafana/otel-lgtm 0.36.0 (Apache-2.0): OTel collector, Prometheus, Tempo, Loki and Grafana in one image.
+  # Only Grafana is published, on localhost. The backend sends OTLP to observability:4317 once MT-022
+  # publishes its telemetry variables; MT-040 adds the collector config and the dashboard.
+  observability:
+    image: grafana/otel-lgtm:0.36.0@sha256:57c04cbd8e7022f32bb84c4ac005d79baf8b08e2c5be44facf11f5f1f9944ba2
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+
+volumes:
+  db-data:
