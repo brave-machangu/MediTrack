@@ -1,22 +1,25 @@
 """RFC 9457 problem+json errors with the `code` values from api/openapi.yaml (AC-31).
 
-Every error the API returns goes through this module, including FastAPI's own
-request-validation errors, unknown routes, database outages and unhandled exceptions.
+Every error the API returns goes through this module: domain errors, FastAPI's own request
+validation errors, unknown routes and methods, database outages and unhandled exceptions.
 Problem bodies never contain request data, SQL or stack traces.
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping, Sequence
 from enum import StrEnum
-from typing import Any
+from typing import NotRequired, TypedDict
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import DBAPIError, OperationalError
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.domain.errors import DomainError, NotFound, PatientHasLogs
 
 logger = logging.getLogger("meditrack.errors")
 
@@ -35,39 +38,47 @@ class ErrorCode(StrEnum):
     MEDICATION_INACTIVE = "MEDICATION_INACTIVE"
     PATIENT_HAS_LOGS = "PATIENT_HAS_LOGS"
     SCHEDULE_OVERLAP = "SCHEDULE_OVERLAP"
+    METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED"
     INTERNAL_ERROR = "INTERNAL_ERROR"
     SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
 
 
-class ProblemError(Exception):
-    """Raise from services or routers to return a problem+json response."""
+class FieldError(TypedDict):
+    field: str
+    message: str
 
-    def __init__(
-        self,
-        status: int,
-        code: ErrorCode,
-        title: str,
-        detail: str | None = None,
-        errors: list[dict[str, str]] | None = None,
-    ) -> None:
-        super().__init__(title)
-        self.status = status
-        self.code = code
-        self.title = title
-        self.detail = detail
-        self.errors = errors
+
+class ProblemBody(TypedDict):
+    type: str
+    title: str
+    status: int
+    code: ErrorCode
+    detail: NotRequired[str]
+    errors: NotRequired[list[FieldError]]
+
+
+# Status, code and title for every domain error (backend/DESIGN.md §4).
+DOMAIN_PROBLEMS: dict[type[DomainError], tuple[int, ErrorCode, str]] = {
+    NotFound: (404, ErrorCode.NOT_FOUND, "Not found"),
+    PatientHasLogs: (
+        409,
+        ErrorCode.PATIENT_HAS_LOGS,
+        "The timezone can't change after doses have been recorded",
+    ),
+}
 
 
 def problem_response(
     status: int,
     code: ErrorCode,
     title: str,
+    *,
     detail: str | None = None,
-    errors: list[dict[str, str]] | None = None,
-    headers: dict[str, str] | None = None,
+    errors: list[FieldError] | None = None,
+    headers: Mapping[str, str] | None = None,
 ) -> JSONResponse:
-    body: dict[str, Any] = {"type": "about:blank", "title": title, "status": status, "code": code}
-    if detail:
+    body: ProblemBody = {"type": "about:blank", "title": title, "status": status, "code": code}
+    if detail is not None:
         body["detail"] = detail
     if errors:
         body["errors"] = errors
@@ -75,7 +86,7 @@ def problem_response(
     return JSONResponse(body, status_code=status, media_type=PROBLEM_MEDIA_TYPE, headers=headers)
 
 
-def _field_path(location: tuple[Any, ...]) -> str:
+def _field_path(location: Sequence[int | str]) -> str:
     """('body', 'times_of_day', 0) -> 'times_of_day[0]'; the 'body'/'query' prefix is dropped."""
     prefixes = {"body", "query", "path"}
     parts = list(location[1:] if location and location[0] in prefixes else location)
@@ -85,17 +96,21 @@ def _field_path(location: tuple[Any, ...]) -> str:
     return path or "request"
 
 
-async def _handle_problem(_: Request, exc: Exception) -> JSONResponse:
-    assert isinstance(exc, ProblemError)
-    return problem_response(exc.status, exc.code, exc.title, exc.detail, exc.errors)
+async def _handle_domain_error(_: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, DomainError)
+    status, code, title = DOMAIN_PROBLEMS[type(exc)]
+    return problem_response(status, code, title)
 
 
 async def _handle_validation(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, RequestValidationError)
+    details = exc.errors()
+    # A malformed ID in the path can't name an existing resource (api/openapi.yaml).
+    if details and all(tuple(detail["loc"][:1]) == ("path",) for detail in details):
+        return problem_response(404, ErrorCode.NOT_FOUND, "Not found")
     # Only the location and pydantic's message: never echo the submitted value.
-    errors = [
-        {"field": _field_path(tuple(err.get("loc", ()))), "message": str(err.get("msg", "Invalid"))}
-        for err in exc.errors()
+    errors: list[FieldError] = [
+        {"field": _field_path(detail["loc"]), "message": str(detail["msg"])} for detail in details
     ]
     return problem_response(422, ErrorCode.VALIDATION_ERROR, "Request is invalid", errors=errors)
 
@@ -104,13 +119,22 @@ async def _handle_http(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, StarletteHTTPException)
     if exc.status_code == 404:
         return problem_response(404, ErrorCode.NOT_FOUND, "Not found")
+    if exc.status_code == 405:
+        # Starlette puts the permitted methods in the Allow header (RFC 9110 §15.5.6).
+        return problem_response(
+            405, ErrorCode.METHOD_NOT_ALLOWED, "Method not allowed", headers=exc.headers
+        )
     if exc.status_code >= 500:
         return problem_response(exc.status_code, ErrorCode.INTERNAL_ERROR, "Internal error")
-    # Other client errors (e.g. 405) have no dedicated contract code.
     return problem_response(exc.status_code, ErrorCode.VALIDATION_ERROR, "Request is invalid")
 
 
-async def _handle_database_unavailable(_: Request, exc: Exception) -> JSONResponse:
+async def _handle_database_error(request: Request, exc: Exception) -> JSONResponse:
+    unreachable = isinstance(exc, OperationalError | PoolTimeoutError) or (
+        isinstance(exc, DBAPIError) and exc.connection_invalidated
+    )
+    if not unreachable:
+        return await _handle_unexpected(request, exc)
     logger.error("database unavailable", extra={"error_type": type(exc).__name__})
     return problem_response(
         503,
@@ -126,9 +150,9 @@ async def _handle_unexpected(_: Request, exc: Exception) -> JSONResponse:
 
 
 def install_error_handlers(app: FastAPI) -> None:
-    app.add_exception_handler(ProblemError, _handle_problem)
+    app.add_exception_handler(DomainError, _handle_domain_error)
     app.add_exception_handler(RequestValidationError, _handle_validation)
     app.add_exception_handler(StarletteHTTPException, _handle_http)
-    app.add_exception_handler(OperationalError, _handle_database_unavailable)
-    app.add_exception_handler(PoolTimeoutError, _handle_database_unavailable)
+    app.add_exception_handler(DBAPIError, _handle_database_error)
+    app.add_exception_handler(PoolTimeoutError, _handle_database_error)
     app.add_exception_handler(Exception, _handle_unexpected)

@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from uuid import UUID
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, Field
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import DBAPIError, IntegrityError, OperationalError
 
 from app.config import Settings
-from app.errors import ErrorCode, ProblemError
+from app.domain.errors import PatientHasLogs
+from app.errors import ErrorCode
 from app.main import create_app
 
 CONTRACT_CODES = {code.value for code in ErrorCode}
@@ -31,9 +33,13 @@ def app_with_test_routes(settings: Settings) -> FastAPI:
     def validate(body: _Body) -> dict[str, str]:
         return {"ok": "yes"}
 
+    @app.get("/_test/items/{item_id}")
+    def item(item_id: UUID) -> dict[str, str]:
+        return {"id": str(item_id)}
+
     @app.get("/_test/conflict")
     def conflict() -> None:
-        raise ProblemError(409, ErrorCode.DUPLICATE_DOSE_LOG, "Dose already recorded")
+        raise PatientHasLogs
 
     @app.get("/_test/crash")
     def crash() -> None:
@@ -42,6 +48,14 @@ def app_with_test_routes(settings: Settings) -> FastAPI:
     @app.get("/_test/db-down")
     def db_down() -> None:
         raise OperationalError("SELECT 1", {}, Exception("connection refused"))
+
+    @app.get("/_test/db-connection-lost")
+    def db_connection_lost() -> None:
+        raise DBAPIError("SELECT 1", {}, Exception("server closed"), connection_invalidated=True)
+
+    @app.get("/_test/db-integrity")
+    def db_integrity() -> None:
+        raise IntegrityError("INSERT INTO patients", {}, Exception("violates a constraint"))
 
     return app
 
@@ -66,11 +80,12 @@ def test_unknown_route_is_not_found_problem(test_client: TestClient) -> None:
     _assert_problem(response.json(), 404, ErrorCode.NOT_FOUND)
 
 
-def test_wrong_method_is_problem_json(test_client: TestClient) -> None:
+def test_wrong_method_is_method_not_allowed_with_allow_header(test_client: TestClient) -> None:
     response = test_client.delete("/healthz")
     assert response.status_code == 405
     assert response.headers["content-type"] == "application/problem+json"
-    _assert_problem(response.json(), 405, ErrorCode.VALIDATION_ERROR)
+    assert "GET" in response.headers["allow"]
+    _assert_problem(response.json(), 405, ErrorCode.METHOD_NOT_ALLOWED)
 
 
 def test_validation_error_lists_fields_without_echoing_values(test_client: TestClient) -> None:
@@ -86,11 +101,19 @@ def test_validation_error_lists_fields_without_echoing_values(test_client: TestC
     assert "PRIVACY-CANARY-NOTE" not in response.text
 
 
-def test_problem_error_keeps_its_status_and_code(test_client: TestClient) -> None:
+def test_malformed_id_in_path_is_not_found(test_client: TestClient) -> None:
+    response = test_client.get("/_test/items/PRIVACY-CANARY-NOTE")
+    assert response.status_code == 404
+    assert response.headers["content-type"] == "application/problem+json"
+    _assert_problem(response.json(), 404, ErrorCode.NOT_FOUND)
+    assert "PRIVACY-CANARY-NOTE" not in response.text
+
+
+def test_domain_error_maps_to_its_status_and_code(test_client: TestClient) -> None:
     response = test_client.get("/_test/conflict")
     assert response.status_code == 409
     assert response.headers["content-type"] == "application/problem+json"
-    _assert_problem(response.json(), 409, ErrorCode.DUPLICATE_DOSE_LOG)
+    _assert_problem(response.json(), 409, ErrorCode.PATIENT_HAS_LOGS)
 
 
 def test_unhandled_error_is_internal_error_without_details(test_client: TestClient) -> None:
@@ -102,10 +125,18 @@ def test_unhandled_error_is_internal_error_without_details(test_client: TestClie
     assert "Traceback" not in response.text
 
 
-def test_database_outage_is_service_unavailable(test_client: TestClient) -> None:
-    response = test_client.get("/_test/db-down")
+@pytest.mark.parametrize("path", ["/_test/db-down", "/_test/db-connection-lost"])
+def test_database_outage_is_service_unavailable(test_client: TestClient, path: str) -> None:
+    response = test_client.get(path)
     assert response.status_code == 503
     assert response.headers["content-type"] == "application/problem+json"
     assert response.headers["retry-after"] == "5"
     _assert_problem(response.json(), 503, ErrorCode.SERVICE_UNAVAILABLE)
     assert "SELECT 1" not in response.text
+
+
+def test_other_database_error_is_internal_error(test_client: TestClient) -> None:
+    response = test_client.get("/_test/db-integrity")
+    assert response.status_code == 500
+    _assert_problem(response.json(), 500, ErrorCode.INTERNAL_ERROR)
+    assert "INSERT INTO" not in response.text
