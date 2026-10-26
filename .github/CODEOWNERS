@@ -1,0 +1,11 @@
+# The Lead must review changes to the contract, the agent rules, migrations,
+# CI/CD and workflows, the responder, and the safety copy shown to users.
+# Enforced once branch protection requires code-owner review (MT-003).
+
+/api/                       @brave-machangu
+/AGENTS.md                  @brave-machangu
+/CLAUDE.md                  @brave-machangu
+/backend/alembic/           @brave-machangu
+/.github/                   @brave-machangu
+/responder/                 @brave-machangu
+/frontend/src/copy.ts       @brave-machangu
