@@ -17,6 +17,17 @@ uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --reload
 
 Migrations live in `alembic/versions/` and read the database from `DATABASE_URL`. Run them as their own step, before the new version starts (operations.md §5.1).
 
+## Container image
+
+`backend/Dockerfile` (MT-021) builds one image for every backend command. It runs as a non-root user (UID 10001), its app directory is read-only, and timezone data comes from the locked `tzdata` wheel (`PYTHONTZPATH` is empty, so the OS's zone files are never read). `DATABASE_URL` is required.
+
+```bash
+docker build --build-arg GIT_SHA=$(git rev-parse --short HEAD) -t meditrack-backend backend   # from the repository root
+docker run --rm -e DATABASE_URL=... meditrack-backend alembic upgrade head          # migrations: a separate step, before the new version starts
+docker run --rm -e DATABASE_URL=... meditrack-backend python -m app.seed --reset    # deploys and the nightly demo reset
+docker run -p 8000:8000 -e DATABASE_URL=... meditrack-backend                       # the API on port 8000; /healthz reports GIT_SHA
+```
+
 ## Check
 
 ```bash
