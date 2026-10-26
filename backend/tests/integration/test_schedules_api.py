@@ -124,6 +124,32 @@ def test_schedules_are_listed_by_start_date(api: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
+    ("change", "stored"),
+    [
+        (
+            {"times_of_day": ["21:00", "09:00"], "grace_period_minutes": 30},
+            {"times_of_day": ["09:00", "21:00"], "grace_period_minutes": 30},
+        ),
+        (
+            {"start_date": "2026-11-03", "days_of_week": [3, 1]},
+            {"start_date": "2026-11-03", "days_of_week": [1, 3]},
+        ),
+    ],
+    ids=["times-and-grace", "dates-and-days"],
+)
+def test_schedule_without_logs_can_be_edited_freely(
+    api: TestClient, change: Json, stored: Json
+) -> None:
+    schedule = create_schedule(api, new_medication(api))
+
+    response = api.patch(f"{SCHEDULES}/{schedule['id']}", json=change)
+
+    assert response.status_code == 200
+    assert response.json() == {**schedule, **stored}
+    assert api.get(schedules_url(schedule["medication_id"])).json() == [{**schedule, **stored}]
+
+
+@pytest.mark.parametrize(
     "change",
     [{"times_of_day": ["09:00"]}, {"grace_period_minutes": 30}, {"start_date": "2026-10-31"}],
     ids=["times", "grace", "start"],
