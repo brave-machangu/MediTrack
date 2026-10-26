@@ -1,7 +1,10 @@
-# Weekly dependency updates. Every Dependabot PR goes through CI, the Reviewer
-# agent and Lead approval like any other change.
-# The uv, npm and docker entries become active once backend/ (MT-010) and
-# frontend/ (MT-020) exist; until then Dependabot reports "no manifest found".
+# Weekly dependency updates. Dependabot PRs are reviewed and merged by the Lead
+# like any other PR, and CI runs on them once MT-031 lands.
+# uv (backend/) and npm (frontend/) are active. The docker entries become active
+# when the Dockerfiles arrive (MT-021, MT-029).
+# Major upgrades of typescript and @types/node are ignored: the frontend pins
+# TypeScript ~5.9 and targets Node 22 (package.json engines). Upgrade them on
+# purpose in a frontend task.
 version: 2
 updates:
   - package-ecosystem: "github-actions"
@@ -24,6 +27,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directories:

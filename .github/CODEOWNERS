@@ -1,6 +1,8 @@
 # The Lead must review changes to the contract, the agent rules, migrations,
 # CI/CD and workflows, the responder, and the safety copy shown to users.
-# Enforced once branch protection requires code-owner review (MT-003).
+# GitHub requests the Lead's review on these paths. Making it required needs
+# "Require review from Code Owners", which only works once agents open PRs from
+# their own GitHub identity (authors can't approve their own PRs).
 
 /api/                       @brave-machangu
 /AGENTS.md                  @brave-machangu
