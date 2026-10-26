@@ -54,6 +54,7 @@ Also: grace 0 (missed one second after scheduled time) and grace 240.
 - Patient-local "today" differs from UTC date (late evening UTC, early morning local).
 - `Europe/London` spring-forward gap and autumn overlap (dates in acceptance criteria).
 - A patient east of UTC (`Asia/Tokyo`) and west (`America/New_York`) produce correct UTC instants.
+- DST gap that starts late in the evening: in `America/Nuuk` on 2026-03-28, Saturday `23:30` and Sunday `00:30` are planned once, as a Sunday dose at `2026-03-29T01:30Z`. A skipped calendar day (`Pacific/Apia`, 2011-12-30) behaves the same way ([requirements §4.3](requirements.md#43-timezone-rules)).
 - Timezone change is accepted with no logs and rejected with 409 `PATIENT_HAS_LOGS` once logs exist.
 - Invalid timezone rejected.
 - **Property-based test (required, AC-39):** Hypothesis over random IANA zones, dates 2000–2040 and times; no duplicate `scheduled_for` per schedule, and existing local times round-trip. Print the seed on failure.
@@ -74,6 +75,8 @@ Also: grace 0 (missed one second after scheduled time) and grace 240.
 | Unhandled exception | 500 `INTERNAL_ERROR` + `trace_id`; error logged with the same trace ID | Integration |
 | Invalid input | 422 `VALIDATION_ERROR` with field errors | Integration |
 | Unknown IDs | 404 `NOT_FOUND` | Integration |
+| Malformed path ID (not a UUID) | 404 `NOT_FOUND`, never 422, even when the body or query is also invalid (contract rule, `api/openapi.yaml` `info.description`) | Integration |
+| Wrong HTTP method on an existing path | 405 `METHOD_NOT_ALLOWED` problem+json with an `Allow` header listing the allowed methods (RFC 9110 §15.5.6) | Integration |
 | Network error / 5xx in UI | Clear message with **Retry**; dose not shown as taken | Frontend |
 | 409 / 422 in UI | Friendly message mapped from `code` | Frontend |
 | Build-time fault injection (`FAULT_DOSE_LOG_ERROR_RATE`, MT-023) | Configured share of `POST /dose-logs` return 500 `INTERNAL_ERROR`; default 0; faulty images are labelled and refused by the production deploy; the drill runs on dev | Integration |
