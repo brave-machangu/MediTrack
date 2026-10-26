@@ -166,7 +166,7 @@ No confirmation dialog for Taken, Skipped or Undo. Undo is the safety net. There
 - Forms open in place on their page (the routes are fixed). When a form opens, focus moves to its heading; on **Cancel**, focus returns to the button that opened it.
 - Labels sit above fields, hints sit under labels, and errors sit between the hint and the field, with a 4 px red bar and `aria-invalid` / `aria-describedby`.
 - On a failed submit: an error summary at the top ("There is a problem", one link per error), focus moves to it, and everything the person typed stays.
-- Client-side checks mirror the contract: required fields, length limits (80 / 100 / 500), `HH:MM`, no duplicate times, at least one day, grace 0–240, end date on or after start date, Missed doses range ≤ 31 days. The server's `errors[].field` is mapped to a form field (`display_name`, `timezone`, `name`, `dosage_label`, `instructions`, `times_of_day[n]`, `days_of_week`, `start_date`, `end_date`, `grace_period_minutes`). A field that doesn't map to anything on screen shows in the summary only.
+- Client-side checks mirror the contract: required fields, length limits (80 / 100 / 500), `HH:MM`, no duplicate times, at least one day, grace 0–240, end date on or after start date, Missed doses range ≤ 31 days. The server's `errors[].field` is mapped to a form field (`display_name`, `timezone`, `name`, `dosage_label`, `instructions`, `times_of_day[n]`, `days_of_week`, `start_date`, `end_date`, `grace_period_minutes`, and `from` / `to` for the Missed doses range, assumed because the contract doesn't name query-parameter fields). A field that doesn't map to anything on screen shows in the summary only.
 - Success messages appear as a notice above the updated content and receive focus. They stay until the next action.
 - The grace period field is `type="text"` with `inputmode="numeric"`, not `type="number"`, which changes value when someone scrolls over it.
 - New-patient timezone is a native `<select>` of `Intl.supportedValuesOf('timeZone')` (418 zones in current browsers; it excludes the alias `UTC`). It is preselected to the browser's timezone as a suggestion only. Underscores display as spaces.
@@ -1110,6 +1110,7 @@ Words used: dose, medication, schedule, taken, skipped, missed, record. Words ne
 | `summary.show` | Show summary | |
 | `summary.adherence` | Adherence | |
 | `summary.adherenceExplain` | Doses recorded as taken, out of all doses taken, skipped or missed. | |
+| `summary.percent` | {value}% | `adherence_percent` with one decimal place, as the API returns it |
 | `summary.noScore` | No doses to score yet | AC-26, verbatim |
 | `summary.noScoreExplain` | Adherence is shown once a dose is taken, skipped or missed. | |
 | `summary.tableCaption` | Doses on {date} | |
@@ -1159,7 +1160,7 @@ The percentage is shown with one decimal place, as the API returns it ("50.0%").
 
 | # | Decision | Why |
 |---|---|---|
-| DD-13 | A dose recorded on Missed doses keeps its card in place, showing the confirmed record and **Undo** while its window is open, until the list is loaded again. The count line follows the server's list, so it drops by one. A card the server stops listing for any other reason (recorded elsewhere) goes. | The server leaves recorded doses out (AC-24). Removing the card would take the confirmation and keyboard focus with it, against DD-1 and principle 3. |
+| DD-13 | A dose recorded on Missed doses keeps its card in place, showing the confirmed record and **Undo** while its window is open, until the list is loaded again (**Show missed doses**, a reload, or navigating away and back). The count line follows the server's list, so it drops by one. A card the server stops listing for any other reason (recorded elsewhere) goes. | The server leaves recorded doses out (AC-24). Removing the card would take the confirmation and keyboard focus with it, against DD-1 and principle 3. |
 
 ## 9. Traceability
 
