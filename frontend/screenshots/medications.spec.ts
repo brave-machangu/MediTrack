@@ -116,3 +116,31 @@ for (const [name, label] of [['change-schedule', 'Change schedule'], ['end-date'
     await form.screenshot({ path: `screenshots/out/${name}-375.png` })
   })
 }
+
+// WCAG 1.4.10 with the longest name and dosage the contract allows (100 characters each, no spaces): they wrap
+// in the list, the saved message, both forms and the dialog instead of pushing the page sideways.
+test('medications reflow at 320 px with the longest name and dosage', async ({ page }) => {
+  const longName = 'Demo' + 'Y'.repeat(96)
+  const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  await page.setViewportSize({ width: 320, height: 900 })
+  await page.goto(pageA)
+  await page.getByRole('button', { name: 'Add a medication' }).click()
+  const form = page.getByRole('form', { name: 'Add a medication' })
+  await form.getByLabel('Name').fill(longName)
+  await form.getByLabel('Dosage').fill('Z'.repeat(100))
+  await form.getByRole('button', { name: 'Save medication' }).click()
+  await expect(page.getByText(`${longName} added.`)).toBeVisible()
+  expect(await overflow(), 'list').toBe(0)
+  await page.getByRole('button', { name: 'Edit medication' }).last().click()
+  await expect(page.getByRole('heading', { name: `Edit ${longName}` })).toBeVisible()
+  expect(await overflow(), 'medication form').toBe(0)
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await page.getByRole('button', { name: 'Add a schedule' }).last().click()
+  await expect(page.getByRole('heading', { name: `Add a schedule for ${longName}` })).toBeVisible()
+  expect(await overflow(), 'schedule form').toBe(0)
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await page.getByRole('button', { name: 'Stop medication', exact: true }).last().click()
+  const dialog = page.getByRole('dialog', { name: `Stop ${longName}?` })
+  await expect(dialog).toBeVisible()
+  expect(await dialog.evaluate((element) => element.scrollWidth - element.clientWidth), 'dialog').toBe(0)
+})

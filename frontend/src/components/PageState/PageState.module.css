@@ -14,8 +14,3 @@
   gap: var(--space-3);
   justify-items: start;
 }
-
-/* A 32-character trace ID must wrap on a 320 px screen. */
-.reference {
-  overflow-wrap: anywhere;
-}
