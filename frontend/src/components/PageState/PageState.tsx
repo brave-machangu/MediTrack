@@ -37,7 +37,7 @@ export function ErrorState({ title, error, onRetry, retrying }: ErrorProps) {
     <Notice tone="error">
       <h2>{title}</h2>
       <p>{errorMessage(error)}</p>
-      {traceId === undefined ? null : <p className={styles.reference}>{copy.error.supportReference(traceId)}</p>}
+      {traceId === undefined ? null : <p>{copy.error.supportReference(traceId)}</p>}
       <Button variant="primary" onClick={onRetry}>
         {retrying ? copy.action.retrying : copy.action.retry}
       </Button>

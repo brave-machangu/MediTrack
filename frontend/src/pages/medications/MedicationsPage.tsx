@@ -5,6 +5,7 @@ import { useMedications } from '../../api/medications'
 import { usePatient, usePatientId } from '../../api/patients'
 import { Button } from '../../components/Button/Button'
 import { Notice } from '../../components/Notice/Notice'
+import { useOpenForm } from '../../components/Field/useOpenForm'
 import { PageHeading } from '../../components/PageHeading/PageHeading'
 import { EmptyState, ErrorState, LoadingState } from '../../components/PageState/PageState'
 import { copy } from '../../copy'
@@ -12,7 +13,7 @@ import { DeleteScheduleDialog, StopMedicationDialog } from './MedicationDialogs'
 import { MedicationForm } from './MedicationForm'
 import { MedicationList } from './MedicationList'
 import styles from './medications.module.css'
-import { useOpenForm } from './useOpenForm'
+import type { OpenForm } from './forms'
 
 export function MedicationsPage() {
   const patientId = usePatientId()
@@ -21,7 +22,7 @@ export function MedicationsPage() {
   // The patient's today, from the server: dates show a year only when it isn't this one (DD-6, DD-7).
   const today = useTodayDoses(patientId).data
   // Destructured: the hook hands out ref callbacks, and the React lint treats a whole object passed that way as a ref.
-  const { open, saved, focusSaved, focusIf, openForm, cancel, onSaved } = useOpenForm()
+  const { open, saved, focusSaved, focusIf, openForm, cancel, onSaved } = useOpenForm<OpenForm>()
   const [showStopped, setShowStopped] = useState(false)
 
   let content: ReactNode

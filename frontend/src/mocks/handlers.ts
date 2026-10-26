@@ -21,6 +21,8 @@ import {
 type DoseLog = components['schemas']['DoseLog']
 type DoseLogCreate = components['schemas']['DoseLogCreate']
 type Medication = components['schemas']['Medication']
+type PatientCreate = components['schemas']['PatientCreate']
+type PatientUpdate = components['schemas']['PatientUpdate']
 type MedicationCreate = components['schemas']['MedicationCreate']
 type MedicationUpdate = components['schemas']['MedicationUpdate']
 type Schedule = components['schemas']['Schedule']
@@ -52,10 +54,12 @@ export function dayOf(patient: Patient, doses: PlannedDose[]): components['schem
 // Records and medications changed through the mock API. Tests reset them after each case (src/test/setup.ts).
 let logs: DoseLog[] = []
 let medications: Medication[] = []
+let patientList: Patient[] = []
 
 export function resetMockData() {
   logs = [...seedLogsA]
   medications = [...medicationsA, stoppedA]
+  patientList = [...patients]
 }
 resetMockData()
 
@@ -151,11 +155,50 @@ function replaceSchedules(medicationId: string, schedules: Schedule[]) {
   medications = medications.map((med) => (med.id === medicationId ? { ...med, schedules } : med))
 }
 
-const findPatient = (id: unknown) => patients.find((patient) => patient.id === id)
+/** The contract's patient rules (AC-01, AC-02), as the backend would report them (422). */
+function patientProblems(body: PatientUpdate) {
+  const errors: { field: string; message: string }[] = []
+  if (body.display_name !== undefined && (body.display_name.trim() === '' || body.display_name.length > 80)) {
+    errors.push({ field: 'display_name', message: 'Name must be 1 to 80 characters.' })
+  }
+  if (body.timezone !== undefined && !Intl.supportedValuesOf('timeZone').includes(body.timezone)) {
+    errors.push({ field: 'timezone', message: 'Not a valid IANA timezone.' })
+  }
+  return errors
+}
+
+/** Whether any dose has been recorded for the patient's medications (requirements §4.3). */
+const hasLogs = (patientId: string) =>
+  logs.some((log) =>
+    medications.some((med) => med.patient_id === patientId && med.schedules.some((schedule) => schedule.id === log.schedule_id)),
+  )
+
+const findPatient = (id: unknown) => patientList.find((patient) => patient.id === id)
 const patientNotFound = () => problem(404, 'NOT_FOUND', 'Patient not found')
 
 export const handlers = [
-  http.get('/api/v1/patients', () => json(patients)),
+  http.get('/api/v1/patients', () => json([...patientList].sort((a, b) => a.display_name.localeCompare(b.display_name)))),
+  http.post<never, PatientCreate>('/api/v1/patients', async ({ request }) => {
+    const body = await request.json()
+    const errors = patientProblems(body)
+    if (errors.length > 0) return validationProblem(errors)
+    const created: Patient = { id: crypto.randomUUID(), display_name: body.display_name, timezone: body.timezone, created_at: now().toISOString() }
+    patientList.push(created)
+    return json(created, 201)
+  }),
+  http.patch<{ patientId: string }, PatientUpdate>('/api/v1/patients/:patientId', async ({ params, request }) => {
+    const existing = findPatient(params.patientId)
+    if (existing === undefined) return patientNotFound()
+    const body = await request.json()
+    const errors = patientProblems(body)
+    if (errors.length > 0) return validationProblem(errors)
+    if (body.timezone !== undefined && body.timezone !== existing.timezone && hasLogs(existing.id)) {
+      return problem(409, 'PATIENT_HAS_LOGS', 'Patient has dose logs')
+    }
+    const updated: Patient = { ...existing, ...body }
+    patientList = patientList.map((patient) => (patient.id === existing.id ? updated : patient))
+    return json(updated)
+  }),
   http.get('/api/v1/patients/:patientId', ({ params }) => {
     const patient = findPatient(params.patientId)
     return patient === undefined ? patientNotFound() : json(patient)

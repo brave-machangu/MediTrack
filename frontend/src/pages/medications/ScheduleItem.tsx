@@ -4,7 +4,7 @@ import { Button } from '../../components/Button/Button'
 import { copy } from '../../copy'
 import styles from './medications.module.css'
 import { datesText, daysText, timesText } from './scheduleText'
-import type { OpenForm, OpenFormState } from './useOpenForm'
+import type { OpenForm, OpenFormState } from './forms'
 
 type Props = Pick<OpenFormState, 'focusIf'> & {
   schedule: Schedule
