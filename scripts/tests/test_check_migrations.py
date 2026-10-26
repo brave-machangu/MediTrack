@@ -80,3 +80,10 @@ class CheckMigrationsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DeliberateFailureDemo(unittest.TestCase):
+    """MT-031 verification only (draft PR, never merged): CI must fail on this."""
+
+    def test_deliberately_fails(self) -> None:
+        self.assertEqual(1 + 1, 3, "deliberate failure for the MT-031 CI demo")
