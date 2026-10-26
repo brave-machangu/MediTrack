@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from dataclasses import dataclass
+from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import DoseLog, Medication, Schedule
@@ -48,3 +49,33 @@ def lock_medication(session: Session, medication_id: UUID) -> Medication | None:
     """
     query = select(Medication).where(Medication.id == medication_id).with_for_update()
     return session.scalars(query).one_or_none()
+
+
+def schedules_of_patient(
+    session: Session, patient_id: UUID, first: date, last: date
+) -> list[tuple[Schedule, Medication]]:
+    """The patient's schedules (with their medications) whose date range touches first..last."""
+    query = (
+        select(Schedule, Medication)
+        .join(Medication, Schedule.medication_id == Medication.id)
+        .where(
+            Medication.patient_id == patient_id,
+            Schedule.start_date <= last,
+            or_(Schedule.end_date.is_(None), Schedule.end_date >= first),
+        )
+    )
+    return [(schedule, medication) for schedule, medication in session.execute(query)]
+
+
+def dose_logs_between(
+    session: Session, schedule_ids: Collection[UUID], first: datetime, last: datetime
+) -> list[DoseLog]:
+    """Logs of these schedules for doses scheduled from first to last, both inclusive."""
+    if not schedule_ids:
+        return []
+    query = select(DoseLog).where(
+        DoseLog.schedule_id.in_(schedule_ids),
+        DoseLog.scheduled_for >= first,
+        DoseLog.scheduled_for <= last,
+    )
+    return list(session.scalars(query))
