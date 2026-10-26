@@ -44,6 +44,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   return (await response.json()) as T
 }
 
+/** Sends a request whose success response has no body (204). */
+export async function requestNoContent(path: string, options: RequestOptions = {}): Promise<void> {
+  await send(path, options)
+}
+
 async function send(path: string, { method = 'GET', body, timeoutMs = TIMEOUT_MS }: RequestOptions): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => {

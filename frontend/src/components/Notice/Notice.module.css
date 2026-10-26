@@ -1,0 +1,64 @@
+.notice {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border: var(--border-thin) solid transparent;
+  border-left-width: var(--border-bar);
+  border-radius: var(--radius-panel);
+}
+
+.icon {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 0.125rem;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  min-width: 0;
+}
+
+.warning {
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-subtle);
+}
+
+.warning .icon {
+  color: var(--color-warning);
+}
+
+.error {
+  border-left-color: var(--color-danger);
+  background: var(--color-danger-subtle);
+}
+
+.error .icon {
+  color: var(--color-danger);
+}
+
+.info {
+  border-left-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.info .icon {
+  color: var(--color-accent);
+}
+
+/* A 32-character trace ID must wrap on a 320 px screen. */
+.reference {
+  overflow-wrap: anywhere;
+}
+
+.success {
+  border-left-color: var(--color-success);
+  background: var(--color-success-subtle);
+}
+
+.success .icon {
+  color: var(--color-success);
+}

@@ -1,6 +1,6 @@
 import { Navigate, type RouteObject } from 'react-router'
 import { AppShell } from './components/AppShell/AppShell'
-import { MedicationsPage } from './pages/MedicationsPage'
+import { MedicationsPage } from './pages/medications/MedicationsPage'
 import { MissedPage } from './pages/MissedPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PatientsPage } from './pages/PatientsPage'

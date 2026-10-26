@@ -34,3 +34,9 @@
   padding: 0;
   list-style: none;
 }
+
+.controls {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
