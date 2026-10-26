@@ -925,7 +925,8 @@ Words used: dose, medication, schedule, taken, skipped, missed, record. Words ne
 | `error.SCHEDULE_OVERLAP` | This medication already has a schedule on those days. End the current schedule first; the new one can start the next day. | Next to the form (AC-34) |
 | `error.SERVICE_UNAVAILABLE` | MediTrack is temporarily unavailable. Please try again in a moment. | With Retry |
 | `error.NOT_FOUND` | We couldn't find that. It may have been removed. | |
-| `error.INTERNAL_ERROR` | Something went wrong. Please try again. | Also `METHOD_NOT_ALLOWED` (added to the contract by #47; the UI never sends an unsupported method) and any unknown code |
+| `error.INTERNAL_ERROR` | Something went wrong. Please try again. | Also any unknown code |
+| `METHOD_NOT_ALLOWED` → `error.INTERNAL_ERROR` | Something went wrong. Please try again. | 405, added to the contract by #47. No copy of its own: the UI never sends an unsupported method, so only a bug can cause it (`prompts/frontend-agent.md`) |
 | `error.network` | MediTrack couldn't be reached. Check your internet connection and try again. | No response |
 | `error.timeout` | MediTrack is taking too long to respond. Please try again. | Client timeout |
 | `dose.notRecorded` | Not recorded. | Put before the message on a dose card, for any failed Taken / Skipped |
