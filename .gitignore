@@ -1,0 +1,31 @@
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.sqlite3
+*.db
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Keys and local archives
+*.pem
+*.key
+/MediTrack-spec.zip

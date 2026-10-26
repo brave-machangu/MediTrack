@@ -1,0 +1,7 @@
+# OpenAPI lint config: npx @redocly/cli@1 lint api/openapi.yaml
+extends:
+  - recommended
+rules:
+  info-license: off              # no licence chosen yet
+  no-server-example.com: off
+  operation-4xx-response: off    # health and list endpoints have no client errors

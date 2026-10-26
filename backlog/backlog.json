@@ -1,0 +1,957 @@
+{
+  "project": "MediTrack",
+  "tasks": [
+    {
+      "id": "MT-001",
+      "title": "Approve spec, contract and decision D1",
+      "phase": "0-spec",
+      "role": "lead",
+      "priority": "P0",
+      "depends_on": [],
+      "files": [
+        "docs/**",
+        "api/openapi.yaml",
+        "README.md",
+        "AGENTS.md"
+      ],
+      "acceptance": [
+        "Lead has read requirements, acceptance criteria, architecture and the contract",
+        "Decision D1 (no accounts in v1) is approved or changed, and requirements.md updated",
+        "ADRs marked Proposed are accepted or changed",
+        "Spec on main (first commit; later spec changes go through PRs)",
+        "Decisions D4 (investigation agent) and D5 (schedule overlap rule) approved or changed"
+      ],
+      "verify": [
+        "npx @redocly/cli@1 lint api/openapi.yaml"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-002",
+      "title": "Create public GitHub Project board and import backlog",
+      "phase": "0-spec",
+      "role": "lead",
+      "priority": "P0",
+      "depends_on": [
+        "MT-001"
+      ],
+      "files": [
+        "backlog/**",
+        "README.md"
+      ],
+      "acceptance": [
+        "Running scripts/create_backlog.py creates one issue per task with labels",
+        "A GitHub Project named 'MediTrack' exists, is PUBLIC, is linked to the repo, and contains every issue",
+        "Board URL added to README.md"
+      ],
+      "verify": [
+        "gh auth refresh -s project",
+        "python3 scripts/create_backlog.py --repo brave-machangu/MediTrack --dry-run",
+        "python3 scripts/create_backlog.py --repo brave-machangu/MediTrack",
+        "Open the board URL in a private browser window to confirm it is public"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-003",
+      "title": "Protect main and create GitHub environments",
+      "phase": "0-spec",
+      "role": "lead",
+      "priority": "P0",
+      "depends_on": [
+        "MT-001"
+      ],
+      "files": [
+        "(GitHub settings only)"
+      ],
+      "acceptance": [
+        "main requires a PR, passing status checks and 1 approval; force pushes blocked",
+        "Environments 'dev' and 'production' exist; 'production' requires Lead approval",
+        "Secret scanning / push protection enabled if available for the repo"
+      ],
+      "verify": [
+        "Try to push directly to main: it must be rejected"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-004",
+      "title": "Repository guardrails: pre-commit with gitleaks, CODEOWNERS, Dependabot",
+      "phase": "0-spec",
+      "role": "platform",
+      "priority": "P0",
+      "depends_on": [
+        "MT-001"
+      ],
+      "files": [
+        ".pre-commit-config.yaml",
+        ".editorconfig",
+        ".github/CODEOWNERS",
+        ".github/dependabot.yml"
+      ],
+      "acceptance": [
+        "pre-commit run --all-files passes on a clean clone",
+        "gitleaks blocks a commit that contains a fake secret (shown in the PR, not committed)",
+        "CODEOWNERS makes the Lead a required reviewer for api/, AGENTS.md, backend/alembic/, .github/, responder/ and frontend/src/copy.ts",
+        "Dependabot is configured for pip, npm, github-actions and docker"
+      ],
+      "verify": [
+        "pre-commit run --all-files"
+      ],
+      "notes": "Platform agent's first task; root tooling files only, Lead-approved PR."
+    },
+    {
+      "id": "MT-005",
+      "title": "Enforce agent roles: Claude Code agent definitions, deny rules, ownership check",
+      "phase": "0-spec",
+      "role": "lead",
+      "priority": "P1",
+      "depends_on": [
+        "MT-001"
+      ],
+      "files": [
+        ".claude/agents/*.md",
+        ".claude/settings.json",
+        "scripts/check_ownership.py"
+      ],
+      "acceptance": [
+        "One agent definition per role in docs/agent-team.md, with its tool list and owned paths",
+        ".claude/settings.json contains the deny rules listed in docs/agent-team.md §7",
+        "scripts/check_ownership.py --role backend --files frontend/src/App.tsx exits 1; with backend/app/main.py it exits 0",
+        "An attempted git push origin main from an agent session is refused (noted in the PR)"
+      ],
+      "verify": [
+        "python3 scripts/check_ownership.py --role backend --files frontend/src/App.tsx; test $? -eq 1",
+        "python3 scripts/check_ownership.py --role backend --files backend/app/main.py"
+      ],
+      "notes": "Drafted by the Spec agent; the Lead reviews and merges."
+    },
+    {
+      "id": "MT-010",
+      "title": "Backend scaffold: FastAPI app, config, health endpoints, problem+json errors",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-001"
+      ],
+      "files": [
+        "backend/**"
+      ],
+      "acceptance": [
+        "uv project with pinned dependencies; ruff, mypy and pytest configured",
+        "App factory in app/main.py; settings read from environment variables (names documented in backend/README.md)",
+        "GET /healthz returns 200 {status: ok, version}",
+        "GET /readyz returns 200 when DB reachable, 503 otherwise",
+        "All errors (incl. FastAPI validation errors) return application/problem+json with a contract code (AC-31)",
+        "Clock protocol with SystemClock and FixedClock in app/clock.py"
+      ],
+      "verify": [
+        "(cd backend && uv run ruff check . && uv run mypy app && uv run pytest -q)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-008",
+      "title": "Acceptance tests written first for the riskiest rules (Test agent)",
+      "phase": "1-build",
+      "role": "test",
+      "priority": "P1",
+      "depends_on": [
+        "MT-010",
+        "MT-020"
+      ],
+      "files": [
+        "backend/tests/acceptance/**",
+        "frontend/src/test/acceptance/**"
+      ],
+      "acceptance": [
+        "Backend: AC-07, AC-08, AC-11, AC-12, AC-15, AC-16, AC-17, AC-25, AC-34 and the boundary table in test-strategy.md §3.2 written as strict-xfail tests",
+        "Frontend: AC-21, AC-35 (frontend part) and AC-36 written as expected-failure tests",
+        "Both suites are green on main (expected failures only); every test name contains its AC ID",
+        "Written from the docs and contract only, in a session separate from the implementers (prompts/test-agent.md)"
+      ],
+      "verify": [
+        "(cd backend && uv run pytest tests/acceptance -q)",
+        "(cd frontend && npm run test -- src/test/acceptance)"
+      ],
+      "notes": "Implementers of MT-011, MT-012, MT-016 and MT-025 remove the markers as their code makes the tests pass. If this task is skipped, implementers still write tests first (see prompts)."
+    },
+    {
+      "id": "MT-011",
+      "title": "Domain: planned doses, DST policy and dose status (pure functions)",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-010"
+      ],
+      "files": [
+        "backend/app/domain/scheduling.py",
+        "backend/tests/unit/**"
+      ],
+      "acceptance": [
+        "AC-07, AC-08, AC-10, AC-11, AC-12 covered by unit tests",
+        "Boundary table in test-strategy.md §3.2 covered for status (log-window cases come in MT-016)",
+        "No imports from FastAPI, SQLAlchemy or datetime.now in app/domain/",
+        "AC-39 property-based DST test (Hypothesis); the suite passes under TZ=UTC and TZ=America/Los_Angeles (AC-35)",
+        "Acceptance tests from MT-008, if merged, pass with only their xfail markers removed"
+      ],
+      "verify": [
+        "(cd backend && uv run pytest tests/unit -q)",
+        "test -d backend/app/domain && ! grep -rnE 'datetime\\.now|utcnow|date\\.today|^(from|import) (fastapi|sqlalchemy)' backend/app/domain && echo 'domain purity ok'"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-012",
+      "title": "Domain: daily adherence summary",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-011"
+      ],
+      "files": [
+        "backend/app/domain/adherence.py",
+        "backend/tests/unit/**"
+      ],
+      "acceptance": [
+        "AC-25 and the backend half of AC-26 covered by unit tests",
+        "Rounding to 1 decimal; null when denominator is 0",
+        "Acceptance tests from MT-008 for AC-25, if merged, pass with only their xfail markers removed"
+      ],
+      "verify": [
+        "(cd backend && uv run pytest tests/unit -q)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-013",
+      "title": "Database models, Alembic migration, UTC handling",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-010"
+      ],
+      "files": [
+        "backend/app/db/**",
+        "backend/alembic/**",
+        "backend/tests/integration/**"
+      ],
+      "acceptance": [
+        "Models for Patient, Medication, Schedule, DoseLog per requirements §4.1; JSON columns for times/days",
+        "Unique constraint uq_dose_log_schedule_time on (schedule_id, scheduled_for)",
+        "alembic upgrade head / downgrade -1 / upgrade head works on SQLite and PostgreSQL",
+        "Datetimes read back are timezone-aware UTC on both databases"
+      ],
+      "verify": [
+        "(cd backend && uv run ruff check . && uv run mypy app && uv run pytest -q)",
+        "(cd backend && uv run pytest tests/integration -q)  # with the PostgreSQL test URL from backend/README.md set; must not skip AC-18"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-014",
+      "title": "Patients API",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-013"
+      ],
+      "files": [
+        "backend/app/api/**",
+        "backend/app/services/**",
+        "backend/tests/**"
+      ],
+      "acceptance": [
+        "AC-01, AC-02, AC-13 pass",
+        "Responses match the contract schemas"
+      ],
+      "verify": [
+        "(cd backend && uv run ruff check . && uv run mypy app && uv run pytest -q)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-015",
+      "title": "Medications and schedules API",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-014"
+      ],
+      "files": [
+        "backend/app/api/**",
+        "backend/app/services/**",
+        "backend/tests/**"
+      ],
+      "acceptance": [
+        "AC-03, AC-04, AC-05, AC-06 pass",
+        "has_dose_logs is returned on schedules",
+        "AC-34: overlapping schedules of one medication return 409 SCHEDULE_OVERLAP on create and on PATCH"
+      ],
+      "verify": [
+        "(cd backend && uv run ruff check . && uv run mypy app && uv run pytest -q)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-016",
+      "title": "Planned doses day view and dose logging (create + undo)",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-011",
+        "MT-015"
+      ],
+      "files": [
+        "backend/app/api/**",
+        "backend/app/services/**",
+        "backend/tests/**"
+      ],
+      "acceptance": [
+        "AC-09, AC-14, AC-15, AC-16, AC-17, AC-19, AC-20 pass",
+        "AC-18 concurrency test passes on PostgreSQL",
+        "Log-window rows of the boundary table in test-strategy.md §3.2 pass",
+        "Planned doses include instructions, log_window_opens_at and log_window_closes_at",
+        "Acceptance tests from MT-008, if merged, pass with only their xfail markers removed"
+      ],
+      "verify": [
+        "(cd backend && uv run ruff check . && uv run mypy app && uv run pytest -q)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-017",
+      "title": "Missed doses and daily adherence endpoints",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-012",
+        "MT-016"
+      ],
+      "files": [
+        "backend/app/api/**",
+        "backend/app/services/**",
+        "backend/tests/**"
+      ],
+      "acceptance": [
+        "AC-22, AC-23, AC-24 pass; AC-25 via the API"
+      ],
+      "verify": [
+        "(cd backend && uv run ruff check . && uv run mypy app && uv run pytest -q)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-018",
+      "title": "Contract test against api/openapi.yaml",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-017"
+      ],
+      "files": [
+        "backend/tests/contract/**"
+      ],
+      "acceptance": [
+        "AC-31 and AC-32 pass: every operation is exercised and responses validate against the contract",
+        "Test fails if an endpoint returns a field or status not in the contract (prove by a temporary change, mention in PR)"
+      ],
+      "verify": [
+        "(cd backend && uv run pytest tests/contract -q)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-019",
+      "title": "Synthetic demo seed",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P1",
+      "depends_on": [
+        "MT-016"
+      ],
+      "files": [
+        "backend/app/seed.py",
+        "backend/tests/**"
+      ],
+      "acceptance": [
+        "AC-33 passes",
+        "Only synthetic names (Demo Patient A/B, Demo Med Alpha…)",
+        "Includes a dedicated 'Probe Patient' with a dose every 2 hours, used by the alert probe",
+        "AC-41: `python -m app.seed --reset` replaces all application rows with the seed in one transaction (decision D1); without --reset seeding never deletes"
+      ],
+      "verify": [
+        "(cd backend && uv run python -m app.seed && uv run python -m app.seed)  # second run adds nothing"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-021",
+      "title": "Backend Dockerfile",
+      "phase": "1-build",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-013"
+      ],
+      "files": [
+        "backend/Dockerfile",
+        "backend/.dockerignore"
+      ],
+      "acceptance": [
+        "Runs as non-root; timezone data available (zoneinfo works for Europe/London)",
+        "Separate command for migrations (alembic upgrade head) documented",
+        "Image accepts build arg GIT_SHA exposed as /healthz version"
+      ],
+      "verify": [
+        "docker build -t meditrack-backend:test --build-arg GIT_SHA=test backend",
+        "docker run --rm meditrack-backend:test python -c \"from zoneinfo import ZoneInfo; ZoneInfo('Europe/London'); print('tz ok')\""
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-022",
+      "title": "Backend telemetry: traces, metrics, logs with shared trace ID",
+      "phase": "2-ship",
+      "role": "backend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-016"
+      ],
+      "files": [
+        "backend/app/telemetry.py",
+        "backend/app/**",
+        "backend/tests/**"
+      ],
+      "acceptance": [
+        "Signals in operations.md §2 emitted via OTLP; endpoint from env var; disabled cleanly when unset",
+        "meditrack.dose_log.attempts counter with outcome attribute only",
+        "Problem responses include trace_id; logs include trace_id and span_id",
+        "AC-29 privacy canary test passes using in-memory exporters",
+        "AC-37: every response has X-Trace-Id equal to the problem trace_id and to the trace_id of the request's log records"
+      ],
+      "verify": [
+        "(cd backend && uv run ruff check . && uv run mypy app && uv run pytest -q)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-023",
+      "title": "Build-time fault injection for the incident drill",
+      "phase": "3-operate",
+      "role": "backend",
+      "priority": "P1",
+      "depends_on": [
+        "MT-022"
+      ],
+      "files": [
+        "backend/app/**",
+        "backend/Dockerfile",
+        "backend/tests/**"
+      ],
+      "acceptance": [
+        "Build arg FAULT_DOSE_LOG_ERROR_RATE (default 0) makes that share of POST /dose-logs return 500 INTERNAL_ERROR",
+        "Image gets label meditrack.fault=true when rate > 0",
+        "Tests cover rate 0 (never fails) and 1 (always fails)"
+      ],
+      "verify": [
+        "(cd backend && uv run ruff check . && uv run mypy app && uv run pytest -q)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-020",
+      "title": "Frontend scaffold: Vite + React + TS, generated API types, client, layout, disclaimer",
+      "phase": "1-build",
+      "role": "frontend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-001"
+      ],
+      "files": [
+        "frontend/**"
+      ],
+      "acceptance": [
+        "npm scripts: dev, build, lint, typecheck, test (single run), gen:api",
+        "src/api/schema.d.ts generated from ../api/openapi.yaml; client handles problem+json and network errors",
+        "MSW handlers built from contract examples; tests use them",
+        "React Router with routes for Patients, Today, Medications, Missed, Summary",
+        "Disclaimer on every page (AC-27); base styles meet NFR-01 sizes",
+        "Vite dev proxy sends /api, /healthz, /readyz to http://localhost:8000",
+        "All UI text in src/copy.ts with the AC-38 safety copy test in place",
+        "The test script runs with TZ=Asia/Tokyo (AC-35)",
+        "AC-40: the FR-13 demo banner is on every page"
+      ],
+      "verify": [
+        "(cd frontend && npm run lint && npm run typecheck && npm run test)",
+        "(cd frontend && npm run gen:api && git diff --exit-code src/api/schema.d.ts)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-024",
+      "title": "Patients page",
+      "phase": "1-build",
+      "role": "frontend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-020"
+      ],
+      "files": [
+        "frontend/src/**",
+        "frontend/tests/**"
+      ],
+      "acceptance": [
+        "List, create and edit patients; timezone picker of IANA names",
+        "422 field errors shown next to fields (AC-02)",
+        "Render + error-state tests"
+      ],
+      "verify": [
+        "(cd frontend && npm run lint && npm run typecheck && npm run test)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-025",
+      "title": "Today page: dose list, Taken/Skipped, undo",
+      "phase": "1-build",
+      "role": "frontend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-020"
+      ],
+      "files": [
+        "frontend/src/**",
+        "frontend/tests/**"
+      ],
+      "acceptance": [
+        "Shows planned doses for the patient's local today from the API",
+        "AC-14, AC-20, AC-21 (double-tap guard, 409 → 'Already recorded')",
+        "AC-28: status as text + icon, 44×44 px buttons, keyboard reachable, axe check has no serious/critical issues",
+        "Network/5xx error shows Retry and never shows the dose as taken",
+        "AC-35 (frontend part) and AC-36 pass",
+        "Acceptance tests from MT-008, if merged, pass with only their expected-failure markers removed"
+      ],
+      "verify": [
+        "(cd frontend && npm run lint && npm run typecheck && npm run test)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-026",
+      "title": "Medications and schedules pages",
+      "phase": "1-build",
+      "role": "frontend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-020"
+      ],
+      "files": [
+        "frontend/src/**",
+        "frontend/tests/**"
+      ],
+      "acceptance": [
+        "Add/edit/deactivate medications; add/edit/delete schedules",
+        "When has_dose_logs is true, only the end date is editable, with an explanation",
+        "Validation errors from AC-03, AC-05, AC-06 shown clearly",
+        "Changing a schedule that has logs sets its end_date (default today) and creates the new schedule from the next day; SCHEDULE_OVERLAP shows the message from prompts/frontend-agent.md",
+        "AC-34 frontend part: SCHEDULE_OVERLAP message shown next to the form; new start date defaults to the old end date + 1"
+      ],
+      "verify": [
+        "(cd frontend && npm run lint && npm run typecheck && npm run test)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-027",
+      "title": "Missed doses page",
+      "phase": "1-build",
+      "role": "frontend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-020"
+      ],
+      "files": [
+        "frontend/src/**",
+        "frontend/tests/**"
+      ],
+      "acceptance": [
+        "Shows last 7 days by default, newest first; date range picker limited to 31 days",
+        "Empty state; each item can be logged late if within the window"
+      ],
+      "verify": [
+        "(cd frontend && npm run lint && npm run typecheck && npm run test)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-028",
+      "title": "Daily summary page",
+      "phase": "1-build",
+      "role": "frontend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-020"
+      ],
+      "files": [
+        "frontend/src/**",
+        "frontend/tests/**"
+      ],
+      "acceptance": [
+        "Date picker; counts and adherence percent; 'No doses to score yet' when null (AC-26)"
+      ],
+      "verify": [
+        "(cd frontend && npm run lint && npm run typecheck && npm run test)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-029",
+      "title": "Frontend Dockerfile with nginx (SPA + /api proxy)",
+      "phase": "1-build",
+      "role": "frontend",
+      "priority": "P0",
+      "depends_on": [
+        "MT-020"
+      ],
+      "files": [
+        "frontend/Dockerfile",
+        "frontend/nginx.conf",
+        "frontend/.dockerignore"
+      ],
+      "acceptance": [
+        "Multi-stage build; nginx serves SPA with history fallback and proxies /api, /healthz, /readyz to the backend service",
+        "Sends a Content-Security-Policy header; runs as non-root if the base image supports it"
+      ],
+      "verify": [
+        "docker build -t meditrack-frontend:test frontend"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-030",
+      "title": "Docker Compose, Makefile and end-to-end smoke test",
+      "phase": "2-ship",
+      "role": "platform",
+      "priority": "P0",
+      "depends_on": [
+        "MT-016",
+        "MT-019",
+        "MT-021",
+        "MT-025",
+        "MT-029",
+        "MT-031"
+      ],
+      "files": [
+        "docker-compose.yml",
+        "Makefile",
+        "scripts/smoke.sh",
+        ".env.example",
+        ".github/workflows/ci.yml"
+      ],
+      "acceptance": [
+        "OPS-01: `make up` starts frontend, backend, PostgreSQL (named volume) and the observability stack; migrations run automatically",
+        "AC-30 (data survives backend restart)",
+        "make down / make seed / make test / make lint / make contract / make gen-api work",
+        "Compose smoke job added to CI"
+      ],
+      "verify": [
+        "make up",
+        "./scripts/smoke.sh http://localhost:8080",
+        "docker compose restart backend && ./scripts/smoke.sh http://localhost:8080"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-031",
+      "title": "CI workflow",
+      "phase": "2-ship",
+      "role": "platform",
+      "priority": "P0",
+      "depends_on": [
+        "MT-010",
+        "MT-020"
+      ],
+      "files": [
+        ".github/workflows/ci.yml",
+        "Makefile"
+      ],
+      "acceptance": [
+        "OPS-02: CI runs on every PR and blocks merge; jobs for lint, unit and integration tests (PostgreSQL service container) for backend and frontend",
+        "Later tasks add their jobs (contract test, image builds, Compose smoke) as listed in development-workflow.md §6",
+        "Backend tests run under TZ=UTC and TZ=America/Los_Angeles (AC-35)",
+        "gitleaks, pip-audit and npm audit --audit-level=high run; third-party actions pinned by commit SHA; workflow permissions default to contents: read",
+        "scripts/check_migrations.py fails destructive migrations unless the PR has the contract-migration label",
+        "python3 scripts/render_backlog.py --check passes",
+        "python3 scripts/check_docs.py passes (links, anchors and requirement/AC/OPS/MT references)"
+      ],
+      "verify": [
+        "Open a PR with a deliberately failing test: CI must fail; revert: CI passes"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-033",
+      "title": "Choose and provision hosting (decision D2)",
+      "phase": "2-ship",
+      "role": "lead",
+      "priority": "P0",
+      "depends_on": [
+        "MT-001"
+      ],
+      "files": [
+        "docs/architecture.md"
+      ],
+      "acceptance": [
+        "D2 decided and recorded as an ADR; dev and production targets exist",
+        "Required secrets created in GitHub Environments by the Lead (names documented, values never in Git)",
+        "Provider chosen from the price check in docs/architecture.md §6.1 (VM with at least 2 vCPU, 4 GB RAM, 40 GB disk) and recorded in ADR-013",
+        "Reverse proxy with automatic HTTPS for the dev and prod subdomains; only ports 80, 443 and SSH open"
+      ],
+      "verify": [
+        "Lead confirms both environments are reachable"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-032",
+      "title": "CD: build to GHCR, auto-deploy dev, manual production, rollback workflow",
+      "phase": "2-ship",
+      "role": "platform",
+      "priority": "P0",
+      "depends_on": [
+        "MT-031",
+        "MT-033"
+      ],
+      "files": [
+        ".github/workflows/deploy.yml",
+        ".github/workflows/rollback.yml",
+        "deploy/**",
+        ".github/workflows/reset-demo.yml"
+      ],
+      "acceptance": [
+        "OPS-03, OPS-04, OPS-11",
+        "Images tagged with git SHA; deployments recorded in GitHub Deployments",
+        "Post-deploy smoke test; automatic redeploy of previous SHA if it fails",
+        "Deploy workflow has an inject_fault input (dev only) that builds the MT-023 faulty image",
+        "Production job refuses images labelled meditrack.fault=true",
+        "FR-14: every deploy runs `python -m app.seed --reset` after migrations",
+        "OPS-16: .github/workflows/reset-demo.yml resets dev and prod nightly at 03:00 UTC and can be run by hand"
+      ],
+      "verify": [
+        "Merge a trivial change: dev updates automatically",
+        "gh workflow run rollback.yml -f environment=dev  # confirm previous SHA is live"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-040",
+      "title": "Observability stack config and dashboard",
+      "phase": "2-ship",
+      "role": "platform",
+      "priority": "P0",
+      "depends_on": [
+        "MT-022",
+        "MT-030"
+      ],
+      "files": [
+        "deploy/otel/**",
+        "deploy/grafana/**",
+        "docker-compose.yml"
+      ],
+      "acceptance": [
+        "OPS-05: a request can be followed metric → trace → log",
+        "Dashboard in operations.md §2.4 provisioned from files",
+        "OPS-06 spot check documented",
+        "The Collector removes url.*, request/response header, client.address and user_agent attributes (operations.md §2.3a)",
+        "Deployed on the VM (decision D3): Grafana requires a login, anonymous access is off, and the OTLP and Prometheus ports are not reachable from outside the VM"
+      ],
+      "verify": [
+        "make up && ./scripts/smoke.sh http://localhost:8080  # then follow the trace in Grafana"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-041",
+      "title": "User-impact alert and probe",
+      "phase": "3-operate",
+      "role": "platform",
+      "priority": "P0",
+      "depends_on": [
+        "MT-040",
+        "MT-019",
+        "MT-023"
+      ],
+      "files": [
+        "deploy/grafana/alerts/**",
+        "probe/**",
+        "docker-compose.yml"
+      ],
+      "acceptance": [
+        "DoseRecordingFailing and ServiceNotReady rules provisioned as in operations.md §4",
+        "Probe runs every 15 s: logs an open Probe Patient dose (expect 201) then undoes it (expect 204), as in operations.md §4",
+        "OPS-07 demonstrated locally with a faulty image",
+        "The probe looks up the Probe Patient by name on every run, so it keeps working after the nightly reset"
+      ],
+      "verify": [
+        "Build a faulty image (MT-023) and run it: alert fires within 7 minutes"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-050",
+      "title": "Responder agent service",
+      "phase": "3-operate",
+      "role": "platform",
+      "priority": "P0",
+      "depends_on": [
+        "MT-032",
+        "MT-041"
+      ],
+      "files": [
+        "responder/**",
+        "docker-compose.yml"
+      ],
+      "acceptance": [
+        "Runbook in operations.md §6.1 implemented; modes off / dry_run / active",
+        "OPS-09 and OPS-10: unit tests for every decision rule; dry_run takes no action",
+        "Uses only the permissions in operations.md §6.2; token from environment, never logged"
+      ],
+      "verify": [
+        "(cd responder && uv run pytest -q)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-053",
+      "title": "Responder investigation agent: evidence packet, investigate.yml, schema-checked analysis, fix PR",
+      "phase": "3-operate",
+      "role": "platform",
+      "priority": "P0",
+      "depends_on": [
+        "MT-050"
+      ],
+      "files": [
+        "responder/**",
+        ".github/workflows/investigate.yml"
+      ],
+      "acceptance": [
+        "Decision D4 recorded: agent CLI, pinned model, API key as a 'responder' environment secret with a provider spend limit",
+        "Responder step 7 posts the evidence packet (allowlisted query templates, operational data only, size-capped) and dispatches investigate.yml",
+        "OPS-12: the agent runs on the live SHA with the tool allowlist in operations.md §6.3; its output is validated against responder/response.schema.json, otherwise the incident escalates",
+        "OPS-13: for a code defect, a PR on incident/<n> with a failing-then-passing test, allowlisted paths only, at most 60 changed lines; never merged automatically",
+        "Unit tests for the evidence allowlist, schema guard and path/size policy (test-strategy.md §3.8)",
+        "Decision D4 limits: the model ID is pinned in investigate.yml; INVESTIGATION_MODE defaults to report; the model job has contents: read only and declares only the responder environment; a second job without a model posts findings and, in pr mode only, validates the patch and opens the PR",
+        "Each run's measured cost is recorded on the incident issue and compared with the estimate in docs/operations.md §6.5"
+      ],
+      "verify": [
+        "(cd responder && uv run pytest -q)",
+        "gh workflow run investigate.yml -f issue=<incident issue number>   # during the drill on dev"
+      ],
+      "notes": "The model never decides the rollback (that stays deterministic in MT-050) and never merges."
+    },
+    {
+      "id": "MT-054",
+      "title": "Security audit: scanners, model review, human disposition, capability table",
+      "phase": "3-operate",
+      "role": "reviewer",
+      "priority": "P1",
+      "depends_on": [
+        "MT-050",
+        "MT-053"
+      ],
+      "files": [
+        "security-audit/**"
+      ],
+      "acceptance": [
+        "Semgrep (Python, TypeScript and the local rules in security.md §7), gitleaks, pip-audit and npm audit run; outputs stored in security-audit/runs/<date>/",
+        "The Reviewer agent's report uses the fixed findings format, and the Lead's disposition is recorded for every finding",
+        "security-audit/capability-table.md lists every agent, MCP server, token and workflow permission with its scope and storage",
+        "No unreviewed high-severity finding remains"
+      ],
+      "verify": [
+        "semgrep scan --config auto --config security-audit/semgrep --error",
+        "(cd backend && uv run pip-audit) && (cd frontend && npm audit --audit-level=high)"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-051",
+      "title": "Incident drill and evidence",
+      "phase": "3-operate",
+      "role": "lead",
+      "priority": "P0",
+      "depends_on": [
+        "MT-023",
+        "MT-050",
+        "MT-053"
+      ],
+      "files": [
+        "docs/incident-drill.md"
+      ],
+      "acceptance": [
+        "OPS-07 and OPS-08 demonstrated on dev",
+        "Evidence (screenshots/recording, workflow run link, incident issue link) in docs/incident-drill.md",
+        "OPS-14: drill B (database outage) causes no rollback and no PR, and escalates within 10 minutes",
+        "OPS-15: the incident issue lets a reader reconstruct version, impact, alert, evidence, model and configuration, decision, actions and verification",
+        "OPS-17: the drill first runs the investigation agent in report mode (findings only, no branch or PR); the Lead enables PR mode only afterwards"
+      ],
+      "verify": [
+        "Follow operations.md §7 step by step"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-052",
+      "title": "Final README, demo video and submission check",
+      "phase": "3-operate",
+      "role": "lead",
+      "priority": "P0",
+      "depends_on": [
+        "MT-051"
+      ],
+      "files": [
+        "README.md"
+      ],
+      "acceptance": [
+        "README has live URL, board URL, one-command setup, test command, screenshots, limitations",
+        "Self-check against all 12 project criteria"
+      ],
+      "verify": [
+        "Fresh clone on a clean machine: make up && make test both succeed"
+      ],
+      "notes": ""
+    },
+    {
+      "id": "MT-060",
+      "title": "User accounts and sign-in (FR-12) — split into backend/frontend tasks when scheduled",
+      "phase": "later",
+      "role": "lead",
+      "priority": "P2",
+      "depends_on": [
+        "MT-052"
+      ],
+      "files": [
+        "backend/**",
+        "frontend/**",
+        "api/openapi.yaml"
+      ],
+      "acceptance": [
+        "Spec and contract change approved first"
+      ],
+      "verify": [
+        "(defined when scheduled)"
+      ],
+      "notes": "Later option recorded under decision D1: a per-visitor private workspace (random cookie token, no email or password) instead of full accounts; it touches every endpoint."
+    }
+  ]
+}

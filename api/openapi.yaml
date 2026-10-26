@@ -1,0 +1,1038 @@
+openapi: 3.0.3
+info:
+  title: MediTrack API
+  version: 0.1.0
+  description: |
+    REST contract for MediTrack, a medication reminder and adherence tracker.
+
+    This file is the **source of truth**. The backend must conform to it and the
+    frontend generates its TypeScript types from it. Changes go through a
+    contract-change PR owned by the Lead (see docs/development-workflow.md).
+
+    Rules referenced here are defined in docs/requirements.md:
+    - Times of day are local to the patient's IANA timezone.
+    - Instants (`date-time`) are UTC, ISO 8601, with a `Z` suffix.
+    - Dates (`date`) are patient-local calendar dates.
+    - Errors use `application/problem+json` with a machine-readable `code`.
+    - Every response carries an `X-Trace-Id` header with the request's
+      OpenTelemetry trace ID (32 lowercase hex characters); problem bodies
+      repeat it as `trace_id`. The UI shows it as a support reference.
+    - Two schedules of the same medication never overlap in dates on a shared
+      weekday (409 `SCHEDULE_OVERLAP`, requirements §4.4), so one dose time
+      can't be planned twice by two schedules.
+
+    MediTrack records user-reported activity only. It gives no medical advice.
+servers:
+  - url: http://localhost:8000
+    description: Local development
+# v1 has no authentication (decision D1 in docs/requirements.md). The public
+# demo holds synthetic data only. Revisit when FR-12 (accounts) is scheduled.
+security: []
+tags:
+  - name: health
+    description: Liveness and readiness probes
+  - name: patients
+    description: People whose medications are tracked
+  - name: medications
+    description: Medications and their display labels
+  - name: schedules
+    description: When a medication should be taken
+  - name: doses
+    description: Planned doses and dose records (taken / skipped)
+  - name: reports
+    description: Missed doses and daily adherence
+
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      operationId: getLiveness
+      summary: Liveness check (process is up)
+      responses:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /readyz:
+    get:
+      tags: [health]
+      operationId: getReadiness
+      summary: Readiness check (database reachable)
+      responses:
+        "200":
+          description: Ready to serve traffic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Not ready (for example, database unreachable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /api/v1/patients:
+    get:
+      tags: [patients]
+      operationId: listPatients
+      summary: List patients
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: All patients, ordered by display_name
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+    post:
+      tags: [patients]
+      operationId: createPatient
+      summary: Create a patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientCreate"
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/patients/{patient_id}:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+    get:
+      tags: [patients]
+      operationId: getPatient
+      summary: Get a patient
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: The patient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [patients]
+      operationId: updatePatient
+      summary: Update a patient
+      description: |
+        `timezone` can only change while the patient has no dose logs;
+        otherwise 409 `PATIENT_HAS_LOGS` (see requirements §4.3).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientUpdate"
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/patients/{patient_id}/medications:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+    get:
+      tags: [medications]
+      operationId: listMedications
+      summary: List a patient's medications
+      parameters:
+        - name: include_inactive
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: Medications, ordered by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Medication"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [medications]
+      operationId: createMedication
+      summary: Add a medication for a patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedicationCreate"
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medication"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/medications/{medication_id}:
+    parameters:
+      - $ref: "#/components/parameters/MedicationId"
+    get:
+      tags: [medications]
+      operationId: getMedication
+      summary: Get a medication with its schedules
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: The medication
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medication"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [medications]
+      operationId: updateMedication
+      summary: Edit or deactivate a medication
+      description: |
+        Setting `active: false` deactivates the medication (one-way in v1).
+        Sending `active: true` for an inactive medication returns 409
+        `MEDICATION_INACTIVE`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedicationUpdate"
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Medication"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/medications/{medication_id}/schedules:
+    parameters:
+      - $ref: "#/components/parameters/MedicationId"
+    get:
+      tags: [schedules]
+      operationId: listSchedules
+      summary: List schedules for a medication
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: Schedules, ordered by start_date
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Schedule"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [schedules]
+      operationId: createSchedule
+      summary: Add a schedule to a medication
+      description: |
+        Returns 409 `MEDICATION_INACTIVE` if the medication is inactive, and
+        409 `SCHEDULE_OVERLAP` if the new schedule's date range overlaps another
+        schedule of the same medication on a shared weekday (acceptance
+        criterion AC-34; an open `end_date` means "no end").
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleCreate"
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ScheduleConflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/schedules/{schedule_id}:
+    parameters:
+      - $ref: "#/components/parameters/ScheduleId"
+    patch:
+      tags: [schedules]
+      operationId: updateSchedule
+      summary: Edit a schedule
+      description: |
+        If the schedule has dose logs, only `end_date` may change; any other
+        field returns 409 `SCHEDULE_HAS_LOGS`. The new `end_date` must be on
+        or after both the patient's local today and the local date of the
+        latest dose log, otherwise 422 `VALIDATION_ERROR`. To change the times
+        or grace period of a schedule that has logs, set its `end_date` and
+        create a new schedule starting the next day. Changes that would make
+        this schedule overlap another schedule of the same medication return
+        409 `SCHEDULE_OVERLAP`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleUpdate"
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ScheduleConflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [schedules]
+      operationId: deleteSchedule
+      summary: Delete a schedule that has no dose logs
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/patients/{patient_id}/doses:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+    get:
+      tags: [doses]
+      operationId: listPlannedDoses
+      summary: Planned doses for one patient-local date, with status
+      parameters:
+        - name: date
+          in: query
+          required: false
+          description: Patient-local date. Defaults to "today" in the patient's timezone.
+          schema:
+            type: string
+            format: date
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: Planned doses ordered by scheduled_for, then medication name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DayDoses"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/dose-logs:
+    post:
+      tags: [doses]
+      operationId: createDoseLog
+      summary: Record a planned dose as taken or skipped
+      description: |
+        At most one log per (schedule_id, scheduled_for). A duplicate returns
+        409 `DUPLICATE_DOSE_LOG` and the original log is unchanged.
+        Returns 422 `DOSE_NOT_PLANNED` if scheduled_for is not a planned dose
+        of the schedule, or `OUTSIDE_LOG_WINDOW` if the current time is outside
+        the allowed window. Returns 409 `MEDICATION_INACTIVE` for an inactive
+        medication.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DoseLogCreate"
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "201":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoseLog"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/dose-logs/{dose_log_id}:
+    parameters:
+      - $ref: "#/components/parameters/DoseLogId"
+    delete:
+      tags: [doses]
+      operationId: deleteDoseLog
+      summary: Undo a dose record
+      description: The dose returns to its time-based status (upcoming, due or missed).
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "204":
+          description: Deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/patients/{patient_id}/missed-doses:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+    get:
+      tags: [reports]
+      operationId: listMissedDoses
+      summary: Currently unlogged doses past their grace period
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: Patient-local start date (inclusive). Defaults to 6 days before today.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Patient-local end date (inclusive). Defaults to today. The range may cover at most 31 days (to − from ≤ 30), otherwise 422.
+          schema:
+            type: string
+            format: date
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: Missed doses, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlannedDose"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/patients/{patient_id}/adherence/daily:
+    parameters:
+      - $ref: "#/components/parameters/PatientId"
+    get:
+      tags: [reports]
+      operationId: getDailyAdherence
+      summary: Daily adherence summary for one patient-local date
+      parameters:
+        - name: date
+          in: query
+          required: false
+          description: Patient-local date. Defaults to today in the patient's timezone.
+          schema:
+            type: string
+            format: date
+      responses:
+        "5XX":
+          $ref: "#/components/responses/ServerError"
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyAdherence"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+components:
+  parameters:
+    PatientId:
+      name: patient_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MedicationId:
+      name: medication_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ScheduleId:
+      name: schedule_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DoseLogId:
+      name: dose_log_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Conflict:
+      description: Request conflicts with current state
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    ScheduleConflict:
+      description: |
+        The schedule change conflicts with current state: `SCHEDULE_OVERLAP`
+        (another schedule of the same medication covers a shared weekday in an
+        overlapping date range, AC-34), `MEDICATION_INACTIVE`, or
+        `SCHEDULE_HAS_LOGS` (updates only).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            scheduleOverlap:
+              summary: AC-34 — new daily 09:00 schedule from 2026-11-05 while an open-ended daily 08:00 schedule exists
+              value:
+                type: about:blank
+                title: Schedule overlaps an existing schedule
+                status: 409
+                code: SCHEDULE_OVERLAP
+                detail: This medication already has a schedule on those days. End the current schedule first; the new one can start the next day.
+                trace_id: 4bf92f3577b34da6a3ce929d0e0e4736
+            medicationInactive:
+              value:
+                type: about:blank
+                title: Medication is inactive
+                status: 409
+                code: MEDICATION_INACTIVE
+                trace_id: 4bf92f3577b34da6a3ce929d0e0e4736
+    ServerError:
+      description: |
+        Unexpected server error (500 `INTERNAL_ERROR`) or dependency outage
+        such as the database (503 `SERVICE_UNAVAILABLE`). Always includes `trace_id`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    ValidationError:
+      description: Request is invalid or violates a business rule
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
+        version:
+          type: string
+          description: Git SHA or release tag of the running build
+          example: 3f2c1a9
+
+    Problem:
+      type: object
+      description: RFC 9457-style error body. Never contains medication names or personal data.
+      required: [title, status, code]
+      properties:
+        type:
+          type: string
+          default: about:blank
+        title:
+          type: string
+          example: Dose already recorded
+        status:
+          type: integer
+          example: 409
+        detail:
+          type: string
+        code:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+            - NOT_FOUND
+            - DUPLICATE_DOSE_LOG
+            - DOSE_NOT_PLANNED
+            - OUTSIDE_LOG_WINDOW
+            - SCHEDULE_HAS_LOGS
+            - MEDICATION_INACTIVE
+            - PATIENT_HAS_LOGS
+            - SCHEDULE_OVERLAP
+            - INTERNAL_ERROR
+            - SERVICE_UNAVAILABLE
+        errors:
+          type: array
+          description: Field-level validation errors (VALIDATION_ERROR only)
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field:
+                type: string
+                example: times_of_day[0]
+              message:
+                type: string
+        trace_id:
+          type: string
+          description: OpenTelemetry trace ID for support and debugging
+          example: 4bf92f3577b34da6a3ce929d0e0e4736
+
+    Timezone:
+      type: string
+      description: IANA timezone name
+      example: Africa/Harare
+
+    LocalTime:
+      type: string
+      description: Local time of day, 24-hour HH:MM
+      pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+      example: "08:00"
+
+    PatientCreate:
+      type: object
+      additionalProperties: false
+      required: [display_name, timezone]
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          example: Demo Patient A
+        timezone:
+          $ref: "#/components/schemas/Timezone"
+
+    PatientUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        timezone:
+          $ref: "#/components/schemas/Timezone"
+
+    Patient:
+      type: object
+      required: [id, display_name, timezone, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        timezone:
+          $ref: "#/components/schemas/Timezone"
+        created_at:
+          type: string
+          format: date-time
+
+    MedicationCreate:
+      type: object
+      additionalProperties: false
+      required: [name, dosage_label]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Demo Med Alpha
+        dosage_label:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Display text only. MediTrack never calculates amounts.
+          example: 1 tablet
+        instructions:
+          type: string
+          maxLength: 500
+          nullable: true
+          example: With food
+
+    MedicationUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        dosage_label:
+          type: string
+          minLength: 1
+          maxLength: 100
+        instructions:
+          type: string
+          maxLength: 500
+          nullable: true
+        active:
+          type: boolean
+          description: Only `false` is accepted for an active medication; `true` on an inactive one returns 409.
+
+    Medication:
+      type: object
+      required: [id, patient_id, name, dosage_label, active, created_at, schedules]
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        dosage_label:
+          type: string
+        instructions:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        deactivated_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        schedules:
+          type: array
+          items:
+            $ref: "#/components/schemas/Schedule"
+
+    ScheduleCreate:
+      type: object
+      additionalProperties: false
+      required: [times_of_day, start_date]
+      properties:
+        times_of_day:
+          type: array
+          minItems: 1
+          maxItems: 12
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/LocalTime"
+          example: ["08:00", "20:00"]
+        days_of_week:
+          type: array
+          description: ISO weekdays, 1 = Monday … 7 = Sunday. Defaults to every day.
+          minItems: 1
+          maxItems: 7
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+          example: [1, 2, 3, 4, 5, 6, 7]
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+          description: Inclusive. Must be on or after start_date.
+        grace_period_minutes:
+          type: integer
+          minimum: 0
+          maximum: 240
+          default: 60
+
+    ScheduleUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        times_of_day:
+          type: array
+          minItems: 1
+          maxItems: 12
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/LocalTime"
+        days_of_week:
+          type: array
+          minItems: 1
+          maxItems: 7
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        grace_period_minutes:
+          type: integer
+          minimum: 0
+          maximum: 240
+
+    Schedule:
+      type: object
+      required: [id, medication_id, times_of_day, days_of_week, start_date, grace_period_minutes, has_dose_logs]
+      properties:
+        id:
+          type: string
+          format: uuid
+        medication_id:
+          type: string
+          format: uuid
+        times_of_day:
+          type: array
+          items:
+            $ref: "#/components/schemas/LocalTime"
+        days_of_week:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        grace_period_minutes:
+          type: integer
+        has_dose_logs:
+          type: boolean
+          description: When true, only end_date can be changed.
+
+    DoseStatus:
+      type: string
+      enum: [upcoming, due, missed, taken, skipped]
+
+    PlannedDose:
+      type: object
+      description: A computed occurrence of a schedule. Not stored except through its DoseLog.
+      required: [schedule_id, medication_id, medication_name, dosage_label, scheduled_for, local_date, local_time, status, late, log_window_opens_at, log_window_closes_at]
+      properties:
+        schedule_id:
+          type: string
+          format: uuid
+        medication_id:
+          type: string
+          format: uuid
+        medication_name:
+          type: string
+        dosage_label:
+          type: string
+        instructions:
+          type: string
+          nullable: true
+          example: With food
+        scheduled_for:
+          type: string
+          format: date-time
+          description: UTC instant. Send this value unchanged when creating a DoseLog.
+          example: "2026-11-02T06:00:00Z"
+        local_date:
+          type: string
+          format: date
+        local_time:
+          type: string
+          description: Local HH:MM after DST adjustment (may differ from the schedule time in a DST gap)
+          example: "08:00"
+        status:
+          $ref: "#/components/schemas/DoseStatus"
+        late:
+          type: boolean
+          description: True when the dose was logged after its grace period.
+        log_window_opens_at:
+          type: string
+          format: date-time
+          description: Earliest instant this dose can be logged (scheduled_for − 60 min by default)
+        log_window_closes_at:
+          type: string
+          format: date-time
+          description: Latest instant this dose can be logged (scheduled_for + 24 h by default)
+        dose_log_id:
+          type: string
+          format: uuid
+          nullable: true
+        recorded_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    DayDoses:
+      type: object
+      required: [patient_id, date, timezone, generated_at, doses]
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        timezone:
+          $ref: "#/components/schemas/Timezone"
+        generated_at:
+          type: string
+          format: date-time
+          description: Server "now" used to compute statuses
+        doses:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlannedDose"
+
+    DoseLogCreate:
+      type: object
+      additionalProperties: false
+      required: [schedule_id, scheduled_for, status]
+      properties:
+        schedule_id:
+          type: string
+          format: uuid
+        scheduled_for:
+          type: string
+          format: date-time
+          description: Must exactly match a PlannedDose.scheduled_for for this schedule.
+        status:
+          type: string
+          enum: [taken, skipped]
+        note:
+          type: string
+          maxLength: 280
+          nullable: true
+
+    DoseLog:
+      type: object
+      required: [id, schedule_id, scheduled_for, status, recorded_at, late]
+      properties:
+        id:
+          type: string
+          format: uuid
+        schedule_id:
+          type: string
+          format: uuid
+        scheduled_for:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [taken, skipped]
+        recorded_at:
+          type: string
+          format: date-time
+        late:
+          type: boolean
+        note:
+          type: string
+          nullable: true
+
+    DailyAdherence:
+      type: object
+      required: [patient_id, date, timezone, planned, taken, taken_late, skipped, missed, pending, adherence_percent]
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        timezone:
+          $ref: "#/components/schemas/Timezone"
+        planned:
+          type: integer
+        taken:
+          type: integer
+          description: Includes late doses
+        taken_late:
+          type: integer
+        skipped:
+          type: integer
+        missed:
+          type: integer
+        pending:
+          type: integer
+          description: upcoming + due
+        adherence_percent:
+          type: number
+          nullable: true
+          description: taken / (taken + skipped + missed) × 100, 1 decimal place; null when the denominator is 0
+          example: 85.7
