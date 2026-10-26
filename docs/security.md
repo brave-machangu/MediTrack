@@ -41,7 +41,7 @@ v1 holds **synthetic demo data only** (see decision D1). The README tells users 
 | Container risk | Non-root user in images; minimal base images; no secrets baked into images |
 | No authentication (v1) | Accepted risk for a synthetic-data demo (decision D1). Demo banner on every page warns not to enter real health information (FR-13). Data reset to the seed on every deploy and nightly (FR-14), which caps how long anything typed into the demo survives. Documented in README. FR-12 tracks accounts; a per-visitor private workspace is recorded as a later option |
 | Secret leaks in commits | `gitleaks` in pre-commit and in CI; GitHub push protection |
-| Supply chain | Third-party GitHub Actions pinned by commit SHA; workflow `permissions` default to `contents: read`; `pip-audit` and `npm audit --audit-level=high` in CI; base images pinned by digest |
+| Supply chain | Third-party GitHub Actions pinned by commit SHA; workflow `permissions` default to `contents: read`; `pip-audit` and `npm audit --audit-level=high` in CI; base images pinned by digest. **New versions wait two weeks:** a dependency, action or image version is adopted only once it has been released for at least 14 days, so a compromised or broken release has time to be noticed and pulled. Dependabot enforces this with `cooldown: default-days: 14` on every ecosystem. Security updates are exempt and arrive immediately, because GitHub doesn't apply the cooldown to them. Agents pinning a version by hand follow the same rule |
 
 ## 5. Responder agent permissions
 

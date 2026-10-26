@@ -10,6 +10,8 @@ Requires [uv](https://docs.astral.sh/uv/). It installs Python 3.12 (from `.pytho
 cd backend
 uv sync
 uv run alembic upgrade head   # create or update the schema; the app never migrates on start
+uv run python -m app.seed      # synthetic demo data + the alert probe's "Probe Patient"; running it again adds nothing
+uv run python -m app.seed --reset   # replace ALL data with the seed in one transaction (deploys and the nightly reset)
 uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --reload   # http://localhost:8000/healthz
 ```
 
@@ -22,6 +24,7 @@ uv run ruff check .        # lint, incl. the ban on datetime.now()/utcnow()/date
 uv run ruff format --check .
 uv run mypy app            # strict
 uv run pytest              # unit + integration; database tests run on SQLite, and on PostgreSQL if configured
+uv run pytest tests/contract   # the app against ../api/openapi.yaml (Schemathesis + a walk through every operation)
 ```
 
 ### PostgreSQL tests
@@ -51,5 +54,7 @@ Every variable uses the `MEDITRACK_` prefix, except `DATABASE_URL`, which keeps 
 | `DATABASE_URL` | SQLAlchemy URL. PostgreSQL in Compose and deployments (MT-013, MT-030). | `sqlite:///./meditrack.db` | `postgresql+psycopg://meditrack:<password>@db:5432/meditrack` |
 | `MEDITRACK_ENV` | One of `local`, `test`, `ci`, `dev`, `production`. | `local` | `production` |
 | `MEDITRACK_VERSION` | Git SHA or release tag, reported by `/healthz` and `/readyz`. The Dockerfile sets it from the `GIT_SHA` build arg (MT-021). | `dev` | `3f2c1a9` |
+| `MEDITRACK_EARLY_LOG_WINDOW_MINUTES` | How long before its scheduled time a dose can be recorded (requirements §4.2). | `60` | `60` |
+| `MEDITRACK_LATE_LOG_LIMIT_MINUTES` | How long after its scheduled time a dose can still be recorded (requirements §4.2). | `1440` | `1440` |
 
 Telemetry and fault-injection settings are added by MT-022 and MT-023.

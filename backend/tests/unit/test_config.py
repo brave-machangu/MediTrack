@@ -8,7 +8,15 @@ from app.config import Settings
 
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in ("DATABASE_URL", "MEDITRACK_ENV", "MEDITRACK_VERSION", "APP_ENV", "APP_VERSION"):
+    for name in (
+        "DATABASE_URL",
+        "MEDITRACK_ENV",
+        "MEDITRACK_VERSION",
+        "MEDITRACK_EARLY_LOG_WINDOW_MINUTES",
+        "MEDITRACK_LATE_LOG_LIMIT_MINUTES",
+        "APP_ENV",
+        "APP_VERSION",
+    ):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -42,3 +50,25 @@ def test_names_without_the_meditrack_prefix_are_ignored(monkeypatch: pytest.Monk
     settings = Settings()
     assert settings.environment == "local"
     assert settings.version == "dev"
+
+
+def test_log_window_defaults_match_requirements() -> None:
+    # requirements §4.2: 60 minutes early, 24 hours late.
+    settings = Settings()
+    assert (settings.early_log_window_minutes, settings.late_log_limit_minutes) == (60, 1440)
+
+
+def test_log_window_reads_its_environment_variables(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDITRACK_EARLY_LOG_WINDOW_MINUTES", "30")
+    monkeypatch.setenv("MEDITRACK_LATE_LOG_LIMIT_MINUTES", "720")
+    settings = Settings()
+    assert (settings.early_log_window_minutes, settings.late_log_limit_minutes) == (30, 720)
+
+
+@pytest.mark.parametrize(
+    "name", ["MEDITRACK_EARLY_LOG_WINDOW_MINUTES", "MEDITRACK_LATE_LOG_LIMIT_MINUTES"]
+)
+def test_negative_log_window_is_rejected(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
+    monkeypatch.setenv(name, "-1")
+    with pytest.raises(ValidationError):
+        Settings()

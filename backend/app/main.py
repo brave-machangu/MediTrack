@@ -7,15 +7,17 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import timedelta
 
 from fastapi import FastAPI
 from starlette.routing import Route
 
-from app.api import health, medications, patients, schedules
+from app.api import doses, health, medications, patients, reports, schedules
 from app.api.deps import AppContext
 from app.clock import Clock, SystemClock
 from app.config import Settings
 from app.db.session import make_engine, make_session_factory
+from app.domain.types import DoseRules
 from app.errors import install_error_handlers
 
 
@@ -42,9 +44,20 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         clock=clock or SystemClock(),
         engine=engine,
         session_factory=make_session_factory(engine),
+        dose_rules=DoseRules(
+            early_log_window=timedelta(minutes=settings.early_log_window_minutes),
+            late_log_limit=timedelta(minutes=settings.late_log_limit_minutes),
+        ),
     )
 
-    routers = (health.router, patients.router, medications.router, schedules.router)
+    routers = (
+        health.router,
+        patients.router,
+        medications.router,
+        schedules.router,
+        doses.router,
+        reports.router,
+    )
     for router in routers:
         app.include_router(router)
     install_error_handlers(

@@ -235,13 +235,13 @@ def check_can_log(schedule: ScheduleRule, scheduled_for: datetime, tz: ZoneInfo,
     # raises MedicationInactive, DoseNotPlanned, OutsideLogWindow, checked in that order
 def missed_doses(doses: Iterable[PlannedDose]) -> list[PlannedDose]       # status missed, newest first
 def missed_range(start: date | None, end: date | None, today: date) -> tuple[date, date]
-    # defaults today−6 … today; raises InvalidDateRange if start > end or end − start > 30 days
+    # defaults today−6 … today; raises InvalidField if start > end or end − start > 30 days
 
 # app/domain/schedule_rules.py
 def find_overlap(candidate: ScheduleSpan, others: Iterable[ScheduleSpan]) -> ScheduleSpan | None
-def check_date_order(start_date: date, end_date: date | None) -> None               # EndBeforeStart
+def check_date_order(start_date: date, end_date: date | None) -> None               # InvalidField
 def check_changes_allowed(has_logs: bool, changed_fields: frozenset[str]) -> None    # ScheduleHasLogs
-def check_end_date_with_logs(new_end: date | None, today: date, last_logged: date) -> None  # EndDateTooEarly
+def check_end_date_with_logs(new_end: date | None, today: date, last_logged: date) -> None  # InvalidField
 
 # app/domain/adherence.py
 def daily_summary(doses: Sequence[PlannedDose]) -> DailySummary
@@ -278,9 +278,9 @@ One table in `app/errors.py` maps each `DomainError` subclass to an HTTP status,
 | Any service lookup | `NotFound` | 404 | `NOT_FOUND` |
 | Request parsing (Pydantic, `extra="forbid"`, timezone and `HH:MM` validators) | `RequestValidationError` | 422 | `VALIDATION_ERROR`, `errors[].field` such as `timezone` or `times_of_day[0]` |
 | Request parsing, errors only in path parameters (Q4) | `RequestValidationError` | 404 | `NOT_FOUND` |
-| `missed_range` | `InvalidDateRange` | 422 | `VALIDATION_ERROR` (`from`/`to`) |
-| `check_date_order` | `EndBeforeStart` | 422 | `VALIDATION_ERROR` (`end_date`) |
-| `check_end_date_with_logs` | `EndDateTooEarly` | 422 | `VALIDATION_ERROR` (`end_date`) |
+| `missed_range` | `InvalidField` | 422 | `VALIDATION_ERROR` (`from`/`to`) |
+| `check_date_order` | `InvalidField` | 422 | `VALIDATION_ERROR` (`end_date`) |
+| `check_end_date_with_logs` | `InvalidField` | 422 | `VALIDATION_ERROR` (`end_date`) |
 | `check_can_log` | `DoseNotPlanned` | 422 | `DOSE_NOT_PLANNED` |
 | `check_can_log` | `OutsideLogWindow` | 422 | `OUTSIDE_LOG_WINDOW` |
 | `check_can_log`; schedule create; medication `active: true` | `MedicationInactive` | 409 | `MEDICATION_INACTIVE` |
@@ -290,6 +290,7 @@ One table in `app/errors.py` maps each `DomainError` subclass to an HTTP status,
 | Patient timezone change with logs | `PatientHasLogs` | 409 | `PATIENT_HAS_LOGS` |
 | Database unreachable: `OperationalError`, pool `TimeoutError`, `DBAPIError` with `connection_invalidated` | — | 503 | `SERVICE_UNAVAILABLE`, `Retry-After: 5` |
 | Starlette routing | `HTTPException` 404 / 405 | 404 / 405 | `NOT_FOUND` / `METHOD_NOT_ALLOWED` with an `Allow` header listing every method of the path (contract change #47) |
+| FastAPI body parsing: a body it can't decode at all (FastAPI raises 400) | `HTTPException` 400 | 422 | `VALIDATION_ERROR`, field `request` (the contract documents 422, never 400; found by the MT-018 contract test) |
 | MT-023 fault injection | `InjectedFault` | 500 | `INTERNAL_ERROR` |
 | Anything else, including any other `IntegrityError` | `Exception` | 500 | `INTERNAL_ERROR` |
 
@@ -341,8 +342,8 @@ The contract fixes some numbers, so they are named constants in `app/config.py`,
 
 - `GRACE_PERIOD_DEFAULT_MINUTES = 60`
 - `GRACE_PERIOD_MAX_MINUTES = 240`
-- `MISSED_RANGE_MAX_DAYS = 31`
-- `MISSED_RANGE_DEFAULT_DAYS = 7`
+- `MISSED_RANGE_MAX_DAYS = 31` (in `app/domain/scheduling.py`, next to the rule, so the domain needs no settings import)
+- `MISSED_RANGE_DEFAULT_DAYS = 7` (same place)
 
 ## 7. Test plan
 
