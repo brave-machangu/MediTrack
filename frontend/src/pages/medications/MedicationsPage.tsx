@@ -8,16 +8,11 @@ import { Notice } from '../../components/Notice/Notice'
 import { PageHeading } from '../../components/PageHeading/PageHeading'
 import { EmptyState, ErrorState, LoadingState } from '../../components/PageState/PageState'
 import { copy } from '../../copy'
+import { DeleteScheduleDialog, StopMedicationDialog } from './MedicationDialogs'
 import { MedicationForm } from './MedicationForm'
-import { MedicationItem } from './MedicationItem'
+import { MedicationList } from './MedicationList'
 import styles from './medications.module.css'
-
-/** Which form is open: one at a time, in place on the page (DD-8). */
-type OpenForm = { kind: 'add' } | { kind: 'edit'; id: string } | null
-
-const focusOnAttach = (element: HTMLElement | null) => {
-  element?.focus()
-}
+import { useOpenForm } from './useOpenForm'
 
 export function MedicationsPage() {
   const patientId = usePatientId()
@@ -25,27 +20,9 @@ export function MedicationsPage() {
   const medications = useMedications(patientId)
   // The patient's today, from the server: dates show a year only when it isn't this one (DD-6, DD-7).
   const today = useTodayDoses(patientId).data
+  // Destructured: the hook hands out ref callbacks, and the React lint treats a whole object passed that way as a ref.
+  const { open, saved, focusSaved, focusIf, openForm, cancel, onSaved } = useOpenForm()
   const [showStopped, setShowStopped] = useState(false)
-  const [open, setOpen] = useState<OpenForm>(null)
-  // The count remounts the notice, so a second save in a row takes focus again.
-  const [saved, setSaved] = useState<{ message: string; count: number } | null>(null)
-  // After Cancel, focus goes back to the button that opened the form: 'add' or a medication id.
-  const [returnFocus, setReturnFocus] = useState<string | null>(null)
-
-  const focusIf = (target: string) => (returnFocus === target ? focusOnAttach : undefined)
-  const openForm = (form: OpenForm) => {
-    setOpen(form)
-    setSaved(null)
-    setReturnFocus(null)
-  }
-  const cancel = (focusTarget: string) => () => {
-    setOpen(null)
-    setReturnFocus(focusTarget)
-  }
-  const onSaved = (message: string) => {
-    setOpen(null)
-    setSaved((previous) => ({ message, count: (previous?.count ?? 0) + 1 }))
-  }
 
   let content: ReactNode
   if (medications.data === undefined) {
@@ -60,12 +37,16 @@ export function MedicationsPage() {
       <LoadingState label={copy.meds.loading} />
     )
   } else {
-    const hasStopped = medications.data.some((medication) => !medication.active)
-    const shown = medications.data.filter((medication) => showStopped || medication.active)
+    const all = medications.data
+    const stopping = open?.kind === 'stop' ? all.find((medication) => medication.id === open.id) : undefined
+    const deleting =
+      open?.kind === 'delete-schedule'
+        ? all.flatMap((medication) => medication.schedules).find((schedule) => schedule.id === open.id)
+        : undefined
     content = (
       <>
         {saved === null ? null : (
-          <div key={saved.count} ref={focusOnAttach} tabIndex={-1}>
+          <div key={saved.count} ref={focusSaved} tabIndex={-1}>
             <Notice tone="success">
               <p>{saved.message}</p>
             </Notice>
@@ -85,10 +66,8 @@ export function MedicationsPage() {
             {copy.meds.add}
           </Button>
         )}
-        {medications.data.length === 0 && open === null ? (
-          <EmptyState title={copy.meds.empty.title} body={copy.meds.empty.body} />
-        ) : null}
-        {hasStopped ? (
+        {all.length === 0 && open === null ? <EmptyState title={copy.meds.empty.title} body={copy.meds.empty.body} /> : null}
+        {all.some((medication) => !medication.active) ? (
           <label className={styles.toggle}>
             <input
               type="checkbox"
@@ -100,36 +79,33 @@ export function MedicationsPage() {
             {copy.meds.showStopped}
           </label>
         ) : null}
-        {shown.length === 0 ? null : (
-          // role="list" because Safari drops list semantics when list-style is none.
-          <ul role="list" className={styles.list}>
-            {shown.map((medication) => (
-              <li key={medication.id}>
-                {open?.kind === 'edit' && open.id === medication.id ? (
-                  <MedicationForm
-                    patientId={patientId}
-                    medication={medication}
-                    onSaved={onSaved}
-                    onCancel={cancel(medication.id)}
-                  />
-                ) : (
-                  <MedicationItem
-                    medication={medication}
-                    timeZone={today?.timezone ?? patient.data?.timezone}
-                    currentYear={today?.date.slice(0, 4)}
-                    onEdit={
-                      medication.active
-                        ? () => {
-                            openForm({ kind: 'edit', id: medication.id })
-                          }
-                        : undefined
-                    }
-                    editRef={focusIf(medication.id)}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
+        <MedicationList
+          medications={all.filter((medication) => showStopped || medication.active)}
+          patientId={patientId}
+          open={open}
+          focusIf={focusIf}
+          cancel={cancel}
+          onSaved={onSaved}
+          openForm={openForm}
+          timeZone={today?.timezone ?? patient.data?.timezone}
+          today={today?.date}
+        />
+        {stopping === undefined ? null : (
+          <StopMedicationDialog
+            patientId={patientId}
+            medication={stopping}
+            onDone={onSaved}
+            onCancel={cancel(`stop-${stopping.id}`)}
+          />
+        )}
+        {deleting === undefined ? null : (
+          <DeleteScheduleDialog
+            patientId={patientId}
+            schedule={deleting}
+            currentYear={today?.date.slice(0, 4)}
+            onDone={onSaved}
+            onCancel={cancel(`delete-schedule-${deleting.id}`)}
+          />
         )}
       </>
     )

@@ -11,9 +11,13 @@ type Props = {
   prefix?: string
 }
 
-/** A failed request explained in plain words, with the support reference when the server sent one. */
+/**
+ * A failed request explained in plain words. The support reference is shown for unexpected failures (5xx)
+ * only; a refusal such as an overlapping schedule is explained well enough for the person to act on.
+ */
 export function ApiErrorNotice({ error, focusRef, prefix }: Props) {
-  const traceId = error instanceof ApiError ? error.traceId : undefined
+  const unexpected = error instanceof ApiError && (error.status === undefined || error.status >= 500)
+  const traceId = unexpected ? error.traceId : undefined
   return (
     <Notice tone="error">
       <p ref={focusRef} tabIndex={-1}>

@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { request } from './client'
+import { request, requestNoContent } from './client'
 import type { components } from './schema'
 
 export type Medication = components['schemas']['Medication']
 export type Schedule = components['schemas']['Schedule']
 export type MedicationCreate = components['schemas']['MedicationCreate']
+export type ScheduleCreate = components['schemas']['ScheduleCreate']
 
 const medicationsKey = (patientId: string) => ['medications', patientId] as const
 
@@ -20,6 +21,27 @@ export function useMedications(patientId: string) {
   })
 }
 
+/** Stops a medication (one-way in v1): no more doses are planned, past records stay (requirements §4.4). */
+export function useStopMedication(patientId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (medicationId: string) =>
+      request<Medication>(`/api/v1/medications/${encodeURIComponent(medicationId)}`, {
+        method: 'PATCH',
+        body: { active: false },
+      }),
+    onSuccess: () => refreshAfterChange(queryClient, patientId),
+  })
+}
+
+/** Medication changes also change what Today, Missed doses and the summary show. */
+function refreshAfterChange(queryClient: ReturnType<typeof useQueryClient>, patientId: string) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: medicationsKey(patientId) }),
+    queryClient.invalidateQueries({ queryKey: ['dose-data', patientId] }),
+  ])
+}
+
 /** Adds a medication, or edits one when `medicationId` is given. */
 export function useSaveMedication(patientId: string, medicationId: string | undefined) {
   const queryClient = useQueryClient()
@@ -28,11 +50,51 @@ export function useSaveMedication(patientId: string, medicationId: string | unde
       medicationId === undefined
         ? request<Medication>(`/api/v1/patients/${encodeURIComponent(patientId)}/medications`, { method: 'POST', body })
         : request<Medication>(`/api/v1/medications/${encodeURIComponent(medicationId)}`, { method: 'PATCH', body }),
-    // Names and dosages also show on Today, so dose data refreshes too. The form stays "Saving…" until both have.
-    onSuccess: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: medicationsKey(patientId) }),
-        queryClient.invalidateQueries({ queryKey: ['dose-data', patientId] }),
-      ]),
+    // The form stays "Saving…" until the refreshed lists arrive.
+    onSuccess: () => refreshAfterChange(queryClient, patientId),
+  })
+}
+
+/** Where a schedule is saved: a new one on a medication, or changes to an existing one. */
+export type ScheduleTarget = { medicationId: string } | { scheduleId: string }
+
+/** Adds a schedule to a medication, or edits one that has no recorded doses yet. */
+export function useSaveSchedule(patientId: string, target: ScheduleTarget) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: ScheduleCreate) =>
+      'medicationId' in target
+        ? request<Schedule>(`/api/v1/medications/${encodeURIComponent(target.medicationId)}/schedules`, {
+            method: 'POST',
+            body,
+          })
+        : request<Schedule>(`/api/v1/schedules/${encodeURIComponent(target.scheduleId)}`, { method: 'PATCH', body }),
+    onSuccess: () => refreshAfterChange(queryClient, patientId),
+  })
+}
+
+/**
+ * Sets a schedule's end date: the only change allowed once it has recorded doses. The server refuses a date
+ * before today or the last record (requirements §4.4, AC-06).
+ */
+export function useEndSchedule(patientId: string, scheduleId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (endDate: string) =>
+      request<Schedule>(`/api/v1/schedules/${encodeURIComponent(scheduleId)}`, {
+        method: 'PATCH',
+        body: { end_date: endDate },
+      }),
+    onSuccess: () => refreshAfterChange(queryClient, patientId),
+  })
+}
+
+/** Deletes a schedule that has no recorded doses (requirements §4.4). */
+export function useDeleteSchedule(patientId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (scheduleId: string) =>
+      requestNoContent(`/api/v1/schedules/${encodeURIComponent(scheduleId)}`, { method: 'DELETE' }),
+    onSuccess: () => refreshAfterChange(queryClient, patientId),
   })
 }

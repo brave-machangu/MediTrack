@@ -11,6 +11,17 @@ configure({ asyncUtilTimeout: 5000 })
 // jsdom starts from a blank document; mirror index.html so axe checks what users actually get.
 document.documentElement.lang = 'en-GB'
 
+// jsdom 30 has no HTMLDialogElement.showModal() or close(). This stand-in only toggles `open`; focus trapping,
+// Esc and the backdrop are the browser's job and are checked in Playwright (screenshots/medications.spec.ts).
+if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
+  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+    this.setAttribute('open', '')
+  }
+  HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+    this.removeAttribute('open')
+  }
+}
+
 // A request with no handler is a test bug, not something to let through to the network.
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' })
