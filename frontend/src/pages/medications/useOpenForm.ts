@@ -8,6 +8,8 @@ export type OpenForm =
   | { kind: 'add-schedule'; medicationId: string }
   | { kind: 'edit-schedule'; id: string }
   | { kind: 'delete-schedule'; id: string }
+  | { kind: 'change-schedule'; id: string }
+  | { kind: 'end-schedule'; id: string }
   | null
 
 const focusOnAttach = (element: HTMLElement | null) => {

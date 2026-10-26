@@ -73,6 +73,11 @@
   border: 0;
 }
 
+/* A group inside a group takes the full width, so its own layout (such as two columns of days) has room. */
+.fieldset .fieldset {
+  justify-self: stretch;
+}
+
 .fieldset > legend {
   padding: 0;
   margin-bottom: var(--space-1);

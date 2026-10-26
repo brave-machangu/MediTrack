@@ -2,10 +2,10 @@ import { useId, type ReactNode } from 'react'
 import { copy } from '../../copy'
 import styles from './Field.module.css'
 
-type Props = { legend: string; hint?: string; error?: string | undefined; children: ReactNode }
+type Props = { legend: string; hint?: string; error?: string | undefined; className?: string | undefined; children: ReactNode }
 
 /** A group of related inputs (times, days) with one legend, hint and error, laid out like TextField. */
-export function Fieldset({ legend, hint, error, children }: Props) {
+export function Fieldset({ legend, hint, error, className, children }: Props) {
   const id = useId()
   const hintId = `${id}-hint`
   const errorId = `${id}-error`
@@ -16,7 +16,7 @@ export function Fieldset({ legend, hint, error, children }: Props) {
   return (
     <fieldset
       aria-describedby={describedBy === '' ? undefined : describedBy}
-      className={`${styles.fieldset} ${error === undefined ? '' : (styles.invalid ?? '')}`}
+      className={`${styles.fieldset} ${error === undefined ? '' : (styles.invalid ?? '')} ${className ?? ''}`}
     >
       <legend className={styles.label}>{legend}</legend>
       {hint === undefined ? null : (

@@ -123,3 +123,10 @@ button.dangerText:hover {
   column-gap: var(--space-5);
   width: 100%;
 }
+
+/* Related fields, set in with a grey bar (the new schedule inside Change schedule). */
+.group {
+  gap: var(--space-4);
+  padding-left: var(--space-4);
+  border-left: var(--border-bar) solid var(--color-border);
+}

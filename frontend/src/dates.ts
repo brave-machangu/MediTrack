@@ -22,6 +22,13 @@ export function formatShortDate(isoDate: string, currentYear: string | undefined
   return format.format(new Date(`${isoDate}T00:00:00Z`))
 }
 
+const DAY_MS = 86_400_000
+
+/** A calendar date `days` later ("2026-10-26" + 1 → "2026-10-27"), counted in UTC so DST can't shift it. */
+export function addDays(isoDate: string, days: number): string {
+  return new Date(Date.parse(`${isoDate}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10)
+}
+
 /** The patient-local calendar date ("2026-10-12") on which a UTC instant falls. */
 export function localDate(instant: string, timeZone: string): string {
   // en-CA formats dates as YYYY-MM-DD.

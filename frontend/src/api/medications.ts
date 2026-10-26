@@ -73,6 +73,22 @@ export function useSaveSchedule(patientId: string, target: ScheduleTarget) {
   })
 }
 
+/**
+ * Sets a schedule's end date: the only change allowed once it has recorded doses. The server refuses a date
+ * before today or the last record (requirements §4.4, AC-06).
+ */
+export function useEndSchedule(patientId: string, scheduleId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (endDate: string) =>
+      request<Schedule>(`/api/v1/schedules/${encodeURIComponent(scheduleId)}`, {
+        method: 'PATCH',
+        body: { end_date: endDate },
+      }),
+    onSuccess: () => refreshAfterChange(queryClient, patientId),
+  })
+}
+
 /** Deletes a schedule that has no recorded doses (requirements §4.4). */
 export function useDeleteSchedule(patientId: string) {
   const queryClient = useQueryClient()
