@@ -7,7 +7,6 @@ Problem bodies never contain request data, SQL or stack traces.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from typing import NamedTuple, NotRequired, TypedDict
@@ -19,6 +18,7 @@ from sqlalchemy.exc import DBAPIError, OperationalError
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import Match, Route
+from starlette.types import Scope
 
 from app.domain.errors import (
     DomainError,
@@ -32,8 +32,7 @@ from app.domain.errors import (
     ScheduleHasLogs,
     ScheduleOverlap,
 )
-
-logger = logging.getLogger("meditrack.errors")
+from app.telemetry import current_trace_id, record_failure
 
 PROBLEM_MEDIA_TYPE = "application/problem+json"
 
@@ -67,6 +66,7 @@ class ProblemBody(TypedDict):
     code: ErrorCode
     detail: NotRequired[str]
     errors: NotRequired[list[FieldError]]
+    trace_id: NotRequired[str]
 
 
 class Problem(NamedTuple):
@@ -123,8 +123,26 @@ def problem_response(
         body["detail"] = detail
     if errors:
         body["errors"] = errors
-    # trace_id is added by the telemetry middleware in MT-022.
+    # The same ID as the X-Trace-Id header, which the telemetry middleware adds (AC-37).
+    trace_id = current_trace_id()
+    if trace_id is not None:
+        body["trace_id"] = trace_id
     return JSONResponse(body, status_code=status, media_type=PROBLEM_MEDIA_TYPE, headers=headers)
+
+
+def _problem(
+    scope: Scope,
+    status: int,
+    code: ErrorCode,
+    title: str,
+    *,
+    detail: str | None = None,
+    errors: list[FieldError] | None = None,
+    headers: Mapping[str, str] | None = None,
+    error_type: str | None = None,
+) -> JSONResponse:
+    record_failure(scope, code, error_type)
+    return problem_response(status, code, title, detail=detail, errors=errors, headers=headers)
 
 
 def _field_path(location: Sequence[int | str]) -> str:
@@ -137,28 +155,35 @@ def _field_path(location: Sequence[int | str]) -> str:
     return path or "request"
 
 
-async def _handle_domain_error(_: Request, exc: Exception) -> JSONResponse:
+async def _handle_domain_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, DomainError)
     problem = DOMAIN_PROBLEMS[type(exc)]
     errors: list[FieldError] | None = None
     if isinstance(exc, InvalidField):
         errors = [{"field": exc.field, "message": exc.message}]
-    return problem_response(
-        problem.status, problem.code, problem.title, detail=problem.detail, errors=errors
+    return _problem(
+        request.scope,
+        problem.status,
+        problem.code,
+        problem.title,
+        detail=problem.detail,
+        errors=errors,
     )
 
 
-async def _handle_validation(_: Request, exc: Exception) -> JSONResponse:
+async def _handle_validation(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, RequestValidationError)
     details = exc.errors()
     # A malformed ID in the path can't name an existing resource (api/openapi.yaml).
     if details and all(tuple(detail["loc"][:1]) == ("path",) for detail in details):
-        return problem_response(404, ErrorCode.NOT_FOUND, "Not found")
+        return _problem(request.scope, 404, ErrorCode.NOT_FOUND, "Not found")
     # Only the location and pydantic's message: never echo the submitted value.
     errors: list[FieldError] = [
         {"field": _field_path(detail["loc"]), "message": str(detail["msg"])} for detail in details
     ]
-    return problem_response(422, ErrorCode.VALIDATION_ERROR, "Request is invalid", errors=errors)
+    return _problem(
+        request.scope, 422, ErrorCode.VALIDATION_ERROR, "Request is invalid", errors=errors
+    )
 
 
 def _allowed_methods(request: Request, routes: Sequence[Route]) -> str:
@@ -178,9 +203,10 @@ def _allowed_methods(request: Request, routes: Sequence[Route]) -> str:
 def _http_problem(request: Request, exc: Exception, routes: Sequence[Route]) -> JSONResponse:
     assert isinstance(exc, StarletteHTTPException)
     if exc.status_code == 404:
-        return problem_response(404, ErrorCode.NOT_FOUND, "Not found")
+        return _problem(request.scope, 404, ErrorCode.NOT_FOUND, "Not found")
     if exc.status_code == 405:
-        return problem_response(
+        return _problem(
+            request.scope,
             405,
             ErrorCode.METHOD_NOT_ALLOWED,
             "Method not allowed",
@@ -190,12 +216,14 @@ def _http_problem(request: Request, exc: Exception, routes: Sequence[Route]) -> 
         # FastAPI's answer to a body it can't decode at all. The contract documents 422 for
         # every invalid request, so this is a validation error like any other.
         errors: list[FieldError] = [{"field": "request", "message": "body is not valid JSON"}]
-        return problem_response(
-            422, ErrorCode.VALIDATION_ERROR, "Request is invalid", errors=errors
+        return _problem(
+            request.scope, 422, ErrorCode.VALIDATION_ERROR, "Request is invalid", errors=errors
         )
     if exc.status_code >= 500:
-        return problem_response(exc.status_code, ErrorCode.INTERNAL_ERROR, "Internal error")
-    return problem_response(exc.status_code, ErrorCode.VALIDATION_ERROR, "Request is invalid")
+        return _problem(request.scope, exc.status_code, ErrorCode.INTERNAL_ERROR, "Internal error")
+    return _problem(
+        request.scope, exc.status_code, ErrorCode.VALIDATION_ERROR, "Request is invalid"
+    )
 
 
 async def _handle_database_error(request: Request, exc: Exception) -> JSONResponse:
@@ -203,19 +231,22 @@ async def _handle_database_error(request: Request, exc: Exception) -> JSONRespon
         isinstance(exc, DBAPIError) and exc.connection_invalidated
     )
     if not unreachable:
-        return await _handle_unexpected(request, exc)
-    logger.error("database unavailable", extra={"error_type": type(exc).__name__})
-    return problem_response(
+        return internal_error_response(request.scope, exc)
+    return _problem(
+        request.scope,
         503,
         ErrorCode.SERVICE_UNAVAILABLE,
         "Service temporarily unavailable",
         headers={"Retry-After": "5"},
+        error_type=type(exc).__name__,
     )
 
 
-async def _handle_unexpected(_: Request, exc: Exception) -> JSONResponse:
-    logger.error("unhandled error", extra={"error_type": type(exc).__name__})
-    return problem_response(500, ErrorCode.INTERNAL_ERROR, "Internal error")
+def internal_error_response(scope: Scope, exc: Exception) -> JSONResponse:
+    """500 INTERNAL_ERROR for an unexpected error. Only its type is logged, never its message."""
+    return _problem(
+        scope, 500, ErrorCode.INTERNAL_ERROR, "Internal error", error_type=type(exc).__name__
+    )
 
 
 def install_error_handlers(app: FastAPI, routes: Sequence[Route]) -> None:
@@ -229,4 +260,4 @@ def install_error_handlers(app: FastAPI, routes: Sequence[Route]) -> None:
     app.add_exception_handler(StarletteHTTPException, handle_http)
     app.add_exception_handler(DBAPIError, _handle_database_error)
     app.add_exception_handler(PoolTimeoutError, _handle_database_error)
-    app.add_exception_handler(Exception, _handle_unexpected)
+    # Anything else is answered by the telemetry middleware (internal_error_response).

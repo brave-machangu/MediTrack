@@ -12,8 +12,10 @@ uv sync
 uv run alembic upgrade head   # create or update the schema; the app never migrates on start
 uv run python -m app.seed      # synthetic demo data + the alert probe's "Probe Patient"; running it again adds nothing
 uv run python -m app.seed --reset   # replace ALL data with the seed in one transaction (deploys and the nightly reset)
-uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --reload   # http://localhost:8000/healthz
+uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --no-access-log --reload   # http://localhost:8000/healthz
 ```
+
+Logs are JSON lines on stdout, each with `trace_id` and `span_id`; every response carries the same ID in `X-Trace-Id`. Run uvicorn with `--no-access-log`: its access log prints raw paths, which contain IDs (docs/security.md §2), while the app logs failed requests with the route template.
 
 Migrations live in `alembic/versions/` and read the database from `DATABASE_URL`. Run them as their own step, before the new version starts (operations.md §5.1).
 

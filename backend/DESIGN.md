@@ -292,9 +292,9 @@ One table in `app/errors.py` maps each `DomainError` subclass to an HTTP status,
 | Starlette routing | `HTTPException` 404 / 405 | 404 / 405 | `NOT_FOUND` / `METHOD_NOT_ALLOWED` with an `Allow` header listing every method of the path (contract change #47) |
 | FastAPI body parsing: a body it can't decode at all (FastAPI raises 400) | `HTTPException` 400 | 422 | `VALIDATION_ERROR`, field `request` (the contract documents 422, never 400; found by the MT-018 contract test) |
 | MT-023 fault injection | `InjectedFault` | 500 | `INTERNAL_ERROR` |
-| Anything else, including any other `IntegrityError` | `Exception` | 500 | `INTERNAL_ERROR` |
+| Anything else, including any other `IntegrityError` | `Exception`, caught by `TelemetryMiddleware` (MT-022) | 500 | `INTERNAL_ERROR`; only the exception type is logged |
 
-The `Exception` handler is the only broad catch in the code base. Services catch only `IntegrityError`, and only translate it when the violated constraint is `uq_dose_log_schedule_time`: `diag.constraint_name` on psycopg, the constraint's columns in the message on SQLite. Anything else is re-raised. The exact psycopg attribute gets checked against the installed version at MT-016. Every failure rolls back, because `session.begin()` exits on the exception.
+The `except Exception` in `TelemetryMiddleware` (app/telemetry.py) is the only broad catch in the code base. Services catch only `IntegrityError`, and only translate it when the violated constraint is `uq_dose_log_schedule_time`: `diag.constraint_name` on psycopg, the constraint's columns in the message on SQLite. Anything else is re-raised. The exact psycopg attribute gets checked against the installed version at MT-016. Every failure rolls back, because `session.begin()` exits on the exception.
 
 ## 5. Hot-path query plan
 

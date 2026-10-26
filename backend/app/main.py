@@ -1,6 +1,9 @@
 """App factory. Run locally with:
 
-uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --no-access-log --reload
+
+--no-access-log: uvicorn's access log prints raw paths, which contain IDs (security.md §2);
+failed requests are logged by app.telemetry with the route template instead.
 """
 
 from __future__ import annotations
@@ -18,16 +21,24 @@ from app.clock import Clock, SystemClock
 from app.config import Settings
 from app.db.session import make_engine, make_session_factory
 from app.domain.types import DoseRules
-from app.errors import install_error_handlers
+from app.errors import install_error_handlers, internal_error_response
+from app.telemetry import Telemetry, instrument, setup_telemetry
 
 
-def create_app(settings: Settings | None = None, clock: Clock | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    clock: Clock | None = None,
+    telemetry: Telemetry | None = None,
+) -> FastAPI:
     settings = settings or Settings()
+    telemetry = telemetry or setup_telemetry(settings)
     engine = make_engine(settings.database_url)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        telemetry.start()
         yield
+        telemetry.stop()
         engine.dispose()
 
     app = FastAPI(
@@ -63,4 +74,5 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
     install_error_handlers(
         app, [route for router in routers for route in router.routes if isinstance(route, Route)]
     )
+    instrument(app, telemetry, internal_error_response)
     return app
