@@ -15,6 +15,9 @@ body {
   line-height: var(--line-height-body);
   color: var(--color-text);
   background: var(--color-bg);
+  /* Names, dosages and instructions can be 80-500 characters with no spaces. "anywhere" (unlike "break-word")
+     also lets grid and flex items shrink, so such a word wraps instead of widening the page (WCAG 1.4.10). */
+  overflow-wrap: anywhere;
 }
 
 h1,

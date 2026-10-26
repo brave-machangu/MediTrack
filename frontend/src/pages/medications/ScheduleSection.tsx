@@ -8,7 +8,7 @@ import { EndDateForm } from './EndDateForm'
 import { medicationHeadingId } from './MedicationItem'
 import { ScheduleForm } from './ScheduleForm'
 import { ScheduleItem } from './ScheduleItem'
-import type { OpenForm, OpenFormState } from './useOpenForm'
+import type { OpenForm, OpenFormState } from './forms'
 
 type Props = Pick<OpenFormState, 'open' | 'focusIf' | 'cancel' | 'onSaved'> & {
   medication: Medication
