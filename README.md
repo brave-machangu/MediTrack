@@ -58,17 +58,19 @@ The frontend and backend agents work in parallel against the same OpenAPI contra
 
 Backlog: [backlog/tasks.md](backlog/tasks.md) (source: [backlog/backlog.json](backlog/backlog.json)).
 
-GitHub issues: **created**. All 38 tasks are [issues #1–#38](https://github.com/brave-machangu/MediTrack/issues), labelled by role, priority and phase, with dependencies linked (created 2026-10-26).
+**Public project board: <https://github.com/users/brave-machangu/projects/1>**
 
-Public GitHub Project board: **not created yet**. The `gh` token needs the `project` scope first. The script is idempotent, so the re-run skips existing issues, then creates the board, makes it public and adds every issue:
+Every backlog task is a [GitHub issue](https://github.com/brave-machangu/MediTrack/issues) on the board, labelled by role, priority and phase, with its dependencies linked. Spec questions and contract-change issues go on the board too.
+
+Keeping it in sync:
 
 ```bash
-gh auth refresh -s project
-python3 scripts/create_backlog.py --repo brave-machangu/MediTrack --dry-run   # preview
-python3 scripts/create_backlog.py --repo brave-machangu/MediTrack             # create board, add issues
+python3 scripts/render_backlog.py                                   # after editing backlog/backlog.json
+python3 scripts/create_backlog.py --repo brave-machangu/MediTrack   # creates issues for new tasks and adds them to the board
+python3 scripts/create_backlog.py --repo brave-machangu/MediTrack --update   # also refreshes existing issue bodies
 ```
 
-Then replace this paragraph with the board link. After editing `backlog/backlog.json`, run `python3 scripts/render_backlog.py`, and use `create_backlog.py --update` to refresh issue bodies.
+The board steps need a `gh` token with the `project` scope (`gh auth refresh -s project`).
 
 ## Running locally
 
@@ -134,7 +136,7 @@ Evidence from the drill will be in `docs/incident-drill.md` (task MT-051).
 | Criterion | Where |
 |---|---|
 | Problem description | This README |
-| Product specification + tracker | [docs/requirements.md](docs/requirements.md), [docs/acceptance-criteria.md](docs/acceptance-criteria.md), [backlog](backlog/tasks.md), GitHub Project (link above once created) |
+| Product specification + tracker | [docs/requirements.md](docs/requirements.md), [docs/acceptance-criteria.md](docs/acceptance-criteria.md), [backlog](backlog/tasks.md), [public GitHub Project board](https://github.com/users/brave-machangu/projects/1) |
 | Agent team | [docs/agent-team.md](docs/agent-team.md), [prompts/](prompts/) |
 | Context management | [AGENTS.md](AGENTS.md) → `docs/` |
 | Application, tests, containers, deployment | Phases 1–2 (see backlog) |
