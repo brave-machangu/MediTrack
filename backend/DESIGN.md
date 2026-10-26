@@ -290,6 +290,7 @@ One table in `app/errors.py` maps each `DomainError` subclass to an HTTP status,
 | Patient timezone change with logs | `PatientHasLogs` | 409 | `PATIENT_HAS_LOGS` |
 | Database unreachable: `OperationalError`, pool `TimeoutError`, `DBAPIError` with `connection_invalidated` | — | 503 | `SERVICE_UNAVAILABLE`, `Retry-After: 5` |
 | Starlette routing | `HTTPException` 404 / 405 | 404 / 405 | `NOT_FOUND` / `METHOD_NOT_ALLOWED` with an `Allow` header listing every method of the path (contract change #47) |
+| FastAPI body parsing: a body it can't decode at all (FastAPI raises 400) | `HTTPException` 400 | 422 | `VALIDATION_ERROR`, field `request` (the contract documents 422, never 400; found by the MT-018 contract test) |
 | MT-023 fault injection | `InjectedFault` | 500 | `INTERNAL_ERROR` |
 | Anything else, including any other `IntegrityError` | `Exception` | 500 | `INTERNAL_ERROR` |
 

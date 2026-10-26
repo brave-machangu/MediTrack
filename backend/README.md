@@ -22,6 +22,7 @@ uv run ruff check .        # lint, incl. the ban on datetime.now()/utcnow()/date
 uv run ruff format --check .
 uv run mypy app            # strict
 uv run pytest              # unit + integration; database tests run on SQLite, and on PostgreSQL if configured
+uv run pytest tests/contract   # the app against ../api/openapi.yaml (Schemathesis + a walk through every operation)
 ```
 
 ### PostgreSQL tests
