@@ -1,18 +1,18 @@
 import { Plus } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTodayDoses } from '../../api/doses'
-import { useMedications, useStopMedication } from '../../api/medications'
+import { useMedications } from '../../api/medications'
 import { usePatient, usePatientId } from '../../api/patients'
 import { Button } from '../../components/Button/Button'
-import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog'
 import { Notice } from '../../components/Notice/Notice'
 import { PageHeading } from '../../components/PageHeading/PageHeading'
 import { EmptyState, ErrorState, LoadingState } from '../../components/PageState/PageState'
 import { copy } from '../../copy'
+import { DeleteScheduleDialog, StopMedicationDialog } from './MedicationDialogs'
 import { MedicationForm } from './MedicationForm'
 import { MedicationList } from './MedicationList'
 import styles from './medications.module.css'
-import { useOpenForm, type OpenForm } from './useOpenForm'
+import { useOpenForm } from './useOpenForm'
 
 export function MedicationsPage() {
   const patientId = usePatientId()
@@ -20,15 +20,9 @@ export function MedicationsPage() {
   const medications = useMedications(patientId)
   // The patient's today, from the server: dates show a year only when it isn't this one (DD-6, DD-7).
   const today = useTodayDoses(patientId).data
-  const stop = useStopMedication(patientId)
   // Destructured: the hook hands out ref callbacks, and the React lint treats a whole object passed that way as a ref.
-  const { open, saved, focusSaved, focusIf, openForm: setOpenForm, cancel, onSaved } = useOpenForm()
+  const { open, saved, focusSaved, focusIf, openForm, cancel, onSaved } = useOpenForm()
   const [showStopped, setShowStopped] = useState(false)
-
-  const openForm = (form: OpenForm) => {
-    stop.reset()
-    setOpenForm(form)
-  }
 
   let content: ReactNode
   if (medications.data === undefined) {
@@ -45,6 +39,10 @@ export function MedicationsPage() {
   } else {
     const all = medications.data
     const stopping = open?.kind === 'stop' ? all.find((medication) => medication.id === open.id) : undefined
+    const deleting =
+      open?.kind === 'delete-schedule'
+        ? all.flatMap((medication) => medication.schedules).find((schedule) => schedule.id === open.id)
+        : undefined
     content = (
       <>
         {saved === null ? null : (
@@ -90,23 +88,23 @@ export function MedicationsPage() {
           onSaved={onSaved}
           openForm={openForm}
           timeZone={today?.timezone ?? patient.data?.timezone}
-          currentYear={today?.date.slice(0, 4)}
+          today={today?.date}
         />
         {stopping === undefined ? null : (
-          <ConfirmDialog
-            title={copy.stopConfirm.title(stopping.name)}
-            body={copy.stopConfirm.body}
-            confirmLabel={copy.stopConfirm.confirm}
-            busy={stop.isPending}
-            error={stop.error}
-            onConfirm={() => {
-              stop.mutate(stopping.id, {
-                onSuccess: () => {
-                  onSaved(copy.meds.stopped(stopping.name))
-                },
-              })
-            }}
+          <StopMedicationDialog
+            patientId={patientId}
+            medication={stopping}
+            onDone={onSaved}
             onCancel={cancel(`stop-${stopping.id}`)}
+          />
+        )}
+        {deleting === undefined ? null : (
+          <DeleteScheduleDialog
+            patientId={patientId}
+            schedule={deleting}
+            currentYear={today?.date.slice(0, 4)}
+            onDone={onSaved}
+            onCancel={cancel(`delete-schedule-${deleting.id}`)}
           />
         )}
       </>

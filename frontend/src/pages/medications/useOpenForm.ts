@@ -1,7 +1,16 @@
 import { useState } from 'react'
 
 /** Which form or dialog is open: one at a time, forms in place on the page (DD-8). */
-export type OpenForm = { kind: 'add' } | { kind: 'edit'; id: string } | { kind: 'stop'; id: string } | null
+export type OpenForm =
+  | { kind: 'add' }
+  | { kind: 'edit'; id: string }
+  | { kind: 'stop'; id: string }
+  | { kind: 'add-schedule'; medicationId: string }
+  | { kind: 'edit-schedule'; id: string }
+  | { kind: 'delete-schedule'; id: string }
+  | { kind: 'change-schedule'; id: string }
+  | { kind: 'end-schedule'; id: string }
+  | null
 
 const focusOnAttach = (element: HTMLElement | null) => {
   element?.focus()
