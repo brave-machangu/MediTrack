@@ -11,6 +11,7 @@ Priorities: **P0** needed to pass, **P1** strongly recommended, **P2** later. Ta
 | MT-003 | Protect main and create GitHub environments | Lead | P0 | MT-001 |
 | MT-004 | Repository guardrails: pre-commit with gitleaks, CODEOWNERS, Dependabot | Platform agent | P0 | MT-001 |
 | MT-005 | Enforce agent roles: Claude Code agent definitions, deny rules, ownership check | Lead | P1 | MT-001 |
+| MT-006 | Docs: adopt the Excellence agent prompts; record Lightsail (D2) and Sonnet 5.5 (D4) | Lead | P1 | MT-001 |
 | MT-010 | Backend scaffold: FastAPI app, config, health endpoints, problem+json errors | Backend agent | P0 | MT-001 |
 | MT-008 | Acceptance tests written first for the riskiest rules (Test agent) | Test agent | P1 | MT-010, MT-020 |
 | MT-011 | Domain: planned doses, DST policy and dose status (pure functions) | Backend agent | P0 | MT-010 |
@@ -146,6 +147,29 @@ python3 scripts/check_ownership.py --role backend --files backend/app/main.py
 ```
 
 **Notes:** Drafted by the Spec agent; the Lead reviews and merges.
+
+## MT-006 — Docs: adopt the Excellence agent prompts; record Lightsail (D2) and Sonnet 5.5 (D4)
+
+- **Owner:** Lead  ·  **Priority:** P1  ·  **Phase:** 0-spec
+- **Depends on:** MT-001
+- **Files:** `prompts/**`, `docs/**`, `README.md`, `AGENTS.md`, `backlog/**`
+
+**Acceptance criteria**
+
+- [ ] prompts/frontend-agent-excellence.md and prompts/backend-agent-excellence.md are in prompts/ and agree with docs/agent-team.md (file ownership) and AGENTS.md rule 11 (Test agent markers)
+- [ ] Docs name the Excellence prompts as the ones to use for MT-020 and for MT-011 onwards, on top of the base prompts
+- [ ] docs/architecture.md §6.1 lists source links; D2 records AWS Lightsail 4 GB with the credit terms and a billing-alarm step
+- [ ] D4 records claude-sonnet-5-5 with a $20/month spend limit and the Opus upgrade path
+- [ ] python3 scripts/check_docs.py and python3 scripts/render_backlog.py --check pass
+
+**Verification**
+
+```bash
+python3 scripts/check_docs.py
+python3 scripts/render_backlog.py --check
+```
+
+**Notes:** Spec agent drafts; the Lead reviews and merges.
 
 ## MT-010 — Backend scaffold: FastAPI app, config, health endpoints, problem+json errors
 
@@ -602,6 +626,7 @@ Open a PR with a deliberately failing test: CI must fail; revert: CI passes
 - [ ] Required secrets created in GitHub Environments by the Lead (names documented, values never in Git)
 - [ ] Provider chosen from the price check in docs/architecture.md §6.1 (VM with at least 2 vCPU, 4 GB RAM, 40 GB disk) and recorded in ADR-013
 - [ ] Reverse proxy with automatic HTTPS for the dev and prod subdomains; only ports 80, 443 and SSH open
+- [ ] D2 provider: AWS Lightsail 4 GB, created only after the billing alarm and credit check in docs/architecture.md §6.1 are done
 
 **Verification**
 
@@ -704,6 +729,7 @@ Build a faulty image (MT-023) and run it: alert fires within 7 minutes
 - [ ] Unit tests for the evidence allowlist, schema guard and path/size policy (test-strategy.md §3.8)
 - [ ] Decision D4 limits: the model ID is pinned in investigate.yml; INVESTIGATION_MODE defaults to report; the model job has contents: read only and declares only the responder environment; a second job without a model posts findings and, in pr mode only, validates the patch and opens the PR
 - [ ] Each run's measured cost is recorded on the incident issue and compared with the estimate in docs/operations.md §6.5
+- [ ] Model pinned to claude-sonnet-5-5 with a $20/month spend limit (D4); switching to claude-opus-5-5 is a PR after the drill
 
 **Verification**
 

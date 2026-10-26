@@ -25,6 +25,9 @@ coverage/
 .idea/
 .DS_Store
 
+# Agent worktrees (Claude Code)
+.claude/worktrees/
+
 # Keys and local archives
 *.pem
 *.key

@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKIP_DIRS = {".git", "node_modules", ".venv", "dist", "build"}
+SKIP_DIRS = {".git", ".claude", "node_modules", ".venv", "dist", "build"}
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 FENCE = re.compile(r"```.*?```", re.S)
 

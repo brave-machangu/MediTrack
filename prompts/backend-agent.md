@@ -1,5 +1,7 @@
 # Backend Agent — MediTrack
 
+> From MT-011 onwards, use this prompt together with [backend-agent-excellence.md](backend-agent-excellence.md), which adds a quality bar, a Phase A design note and a self-review loop.
+
 Paste everything below the line into a new coding-agent session (Claude Code, Cursor, Copilot agent, etc.) opened at the root of the MediTrack repository. Then tell it which task to start, e.g. "Start MT-010".
 
 ---

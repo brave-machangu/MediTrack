@@ -89,7 +89,7 @@ Status of a planned dose:
 For a patient and a local date:
 
 - Counts: `planned`, `taken`, `taken_late`, `skipped`, `missed`, `pending` (`upcoming` + `due`).
-- `adherence_percent = taken / (taken + skipped + missed) × 100`, rounded to 1 decimal place. Late doses count as taken.
+- `adherence_percent = taken / (taken + skipped + missed) × 100`, rounded **half-up** to 1 decimal place (computed with `decimal.Decimal`; Python's `round()` rounds half to even). Example: 1 taken of 16 → 6.25 → **6.3**. Late doses count as taken.
 - If `taken + skipped + missed = 0`, `adherence_percent` is `null` (the UI shows "No doses to score yet").
 
 ## 5. Functional requirements
@@ -137,7 +137,7 @@ Recorded by the Lead in MT-001 on 2026-10-26.
 | # | Decision | Outcome | Status |
 |---|---|---|---|
 | D1 | Authentication in v1 | **No accounts in v1.** The public demo holds synthetic data only and is **reset to the synthetic seed on every deploy and nightly** (FR-14). Every page warns not to enter real health information (FR-13). *Later option, not v1:* a private demo workspace per visitor (random token in an `HttpOnly` cookie, no email or password), or full accounts (FR-12). Deferred because it touches every endpoint. | **Decided** |
-| D2 | Hosting | **One small Linux VM running Docker Compose**, with dev and prod as two Compose projects. Fallback: hosted platform + managed PostgreSQL. The provider is chosen in MT-033 from the price check in [architecture.md §6.1](architecture.md#61-price-check-2026-10-26). | **Decided** (provider open) |
+| D2 | Hosting | **One small Linux VM running Docker Compose**, with dev and prod as two Compose projects. Provider: **AWS Lightsail, 4 GB bundle** (2 vCPU, 4 GB RAM, 80 GB SSD, $24/month with IPv4), paid from the new-account credit during the course. Credit terms and the billing-alarm step: [architecture.md §6.1](architecture.md#61-price-check-2026-10-26). Fallback: hosted platform + managed PostgreSQL. | **Decided** |
 | D3 | Telemetry backend when deployed | Follows D2: **the same Grafana stack on the VM**, with Grafana behind a login and not publicly writable ([operations.md §3](operations.md#3-telemetry-backend)) | **Decided** |
-| D4 | Investigation agent | **Approved with limits:** headless Claude Code with a **pinned model**. The API key lives in a dedicated workspace with a **hard monthly spend limit** and is stored only as a `responder` environment secret. It starts in **report-only mode** (findings on the incident issue, no branch or PR); PR mode is switched on by the Lead only after the drill works. It never merges, deploys or sees production secrets. Expected cost per run: [operations.md §6.5](operations.md#65-cost-per-investigation-run) | **Decided** |
+| D4 | Investigation agent | **Approved with limits:** headless Claude Code with the **pinned model `claude-sonnet-5-5`**. The API key lives in a dedicated workspace with a **hard spend limit of $20/month** and is stored only as a `responder` environment secret. It starts in **report-only mode** (findings on the incident issue, no branch or PR); PR mode is switched on by the Lead only after the drill works. It never merges, deploys or sees production secrets. If the drill shows weak investigations, the Lead switches the pin to `claude-opus-5-5` by PR. Expected cost per run: [operations.md §6.5](operations.md#65-cost-per-investigation-run) | **Decided** |
 | D5 | Schedule overlap rule (§4.4) | **Adopted.** AC-34; `SCHEDULE_OVERLAP` in the contract (with example) and in the frontend error messages | **Decided** |

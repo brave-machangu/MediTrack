@@ -45,8 +45,8 @@ Details and decisions: [docs/architecture.md](docs/architecture.md) · API contr
 |---|---|
 | Lead (human) | Requirements, contract, backlog, approvals, merges, production deploys |
 | Spec agent | Docs, contract and backlog drafts (by PR) |
-| Frontend agent | `frontend/` — [prompt](prompts/frontend-agent.md) |
-| Backend agent | `backend/` — [prompt](prompts/backend-agent.md) |
+| Frontend agent | `frontend/` — [prompt](prompts/frontend-agent.md) + [Excellence edition](prompts/frontend-agent-excellence.md) from MT-020 |
+| Backend agent | `backend/` — [prompt](prompts/backend-agent.md) + [Excellence edition](prompts/backend-agent-excellence.md) from MT-011 |
 | Reviewer agent | Independent review of every PR — [prompt](prompts/reviewer-agent.md) |
 | Test agent | Writes acceptance tests for the riskiest rules *before* they are implemented — [prompt](prompts/test-agent.md) |
 | Platform agent (later) | Docker Compose, CI/CD, observability |
