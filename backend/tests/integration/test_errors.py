@@ -88,6 +88,13 @@ def test_wrong_method_is_method_not_allowed_with_allow_header(test_client: TestC
     _assert_problem(response.json(), 405, ErrorCode.METHOD_NOT_ALLOWED)
 
 
+def test_allow_header_lists_every_method_of_the_path(test_client: TestClient) -> None:
+    # GET and POST on /api/v1/patients are separate routes; Allow must name both.
+    response = test_client.delete("/api/v1/patients")
+    assert response.status_code == 405
+    assert {"GET", "POST"} <= {method.strip() for method in response.headers["allow"].split(",")}
+
+
 def test_validation_error_lists_fields_without_echoing_values(test_client: TestClient) -> None:
     response = test_client.post(
         "/_test/validate",

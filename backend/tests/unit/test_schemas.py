@@ -9,7 +9,16 @@ from app.api.schemas import PatientCreate
 
 
 @pytest.mark.parametrize(
-    "name", ["Mars/Base", "europe/london", "Europe/London ", "", "../../etc/passwd", "localtime"]
+    "name",
+    [
+        "Mars/Base",
+        "europe/london",
+        "Europe/London ",
+        "",
+        "../../etc/passwd",
+        "localtime",
+        "posixrules",
+    ],
 )
 def test_unknown_or_wrong_case_timezone_rejected_ac02(name: str) -> None:
     with pytest.raises(ValidationError) as error:

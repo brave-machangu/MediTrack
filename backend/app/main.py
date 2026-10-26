@@ -9,6 +9,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from starlette.routing import Route
 
 from app.api import health, patients
 from app.api.deps import AppContext
@@ -43,7 +44,10 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         session_factory=make_session_factory(engine),
     )
 
-    install_error_handlers(app)
-    app.include_router(health.router)
-    app.include_router(patients.router)
+    routers = (health.router, patients.router)
+    for router in routers:
+        app.include_router(router)
+    install_error_handlers(
+        app, [route for router in routers for route in router.routes if isinstance(route, Route)]
+    )
     return app

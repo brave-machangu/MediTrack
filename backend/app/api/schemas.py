@@ -8,16 +8,20 @@ from __future__ import annotations
 
 from datetime import datetime
 from functools import cache
+from importlib import resources
 from typing import Annotated, Self
 from uuid import UUID
-from zoneinfo import available_timezones
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 @cache
 def _iana_timezones() -> frozenset[str]:
-    return frozenset(available_timezones())
+    # The pinned tzdata package's own list, identical on every OS. zoneinfo's
+    # available_timezones() also scans the system zone directory, which on Linux holds
+    # "localtime" (the server's zone), and results must never depend on that (NFR-09).
+    zones = resources.files("tzdata").joinpath("zones").read_text(encoding="utf-8")
+    return frozenset(zones.split())
 
 
 def _check_timezone(name: str) -> str:

@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DBAPIError, OperationalError
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.routing import Match, Route
 
 from app.domain.errors import DomainError, NotFound, PatientHasLogs
 
@@ -115,14 +116,30 @@ async def _handle_validation(_: Request, exc: Exception) -> JSONResponse:
     return problem_response(422, ErrorCode.VALIDATION_ERROR, "Request is invalid", errors=errors)
 
 
-async def _handle_http(_: Request, exc: Exception) -> JSONResponse:
+def _allowed_methods(request: Request, routes: Sequence[Route]) -> str:
+    """Every method the requested path supports (RFC 9110 §15.5.6).
+
+    Starlette's own Allow header names only the first route that matched the path, and here
+    each method of a path is a separate route.
+    """
+    methods: set[str] = set()
+    for route in routes:
+        match, _ = route.matches(request.scope)
+        if match is not Match.NONE and route.methods:
+            methods |= route.methods
+    return ", ".join(sorted(methods))
+
+
+def _http_problem(request: Request, exc: Exception, routes: Sequence[Route]) -> JSONResponse:
     assert isinstance(exc, StarletteHTTPException)
     if exc.status_code == 404:
         return problem_response(404, ErrorCode.NOT_FOUND, "Not found")
     if exc.status_code == 405:
-        # Starlette puts the permitted methods in the Allow header (RFC 9110 §15.5.6).
         return problem_response(
-            405, ErrorCode.METHOD_NOT_ALLOWED, "Method not allowed", headers=exc.headers
+            405,
+            ErrorCode.METHOD_NOT_ALLOWED,
+            "Method not allowed",
+            headers={"Allow": _allowed_methods(request, routes)},
         )
     if exc.status_code >= 500:
         return problem_response(exc.status_code, ErrorCode.INTERNAL_ERROR, "Internal error")
@@ -149,10 +166,15 @@ async def _handle_unexpected(_: Request, exc: Exception) -> JSONResponse:
     return problem_response(500, ErrorCode.INTERNAL_ERROR, "Internal error")
 
 
-def install_error_handlers(app: FastAPI) -> None:
+def install_error_handlers(app: FastAPI, routes: Sequence[Route]) -> None:
+    """`routes` are the app's routes, used to list the permitted methods on a 405."""
+
+    async def handle_http(request: Request, exc: Exception) -> JSONResponse:
+        return _http_problem(request, exc, routes)
+
     app.add_exception_handler(DomainError, _handle_domain_error)
     app.add_exception_handler(RequestValidationError, _handle_validation)
-    app.add_exception_handler(StarletteHTTPException, _handle_http)
+    app.add_exception_handler(StarletteHTTPException, handle_http)
     app.add_exception_handler(DBAPIError, _handle_database_error)
     app.add_exception_handler(PoolTimeoutError, _handle_database_error)
     app.add_exception_handler(Exception, _handle_unexpected)
