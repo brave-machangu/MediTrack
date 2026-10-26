@@ -238,7 +238,9 @@ def test_patch_into_overlap_rejected_ac34(api: TestClient) -> None:
     response = api.patch(f"{SCHEDULES}/{weekend['id']}", json={"days_of_week": [5, 6, 7]})
 
     assert_problem(response, 409, "SCHEDULE_OVERLAP")
-    assert api.get(schedules_url(medication_id)).json()[1]["days_of_week"] == [6, 7]
+    # Both start on the same date, so look the schedule up by id, not by list position.
+    stored = {schedule["id"]: schedule for schedule in api.get(schedules_url(medication_id)).json()}
+    assert stored[weekend["id"]]["days_of_week"] == [6, 7]
 
 
 @pytest.mark.parametrize("new_end", ["2026-11-10", None], ids=["extended", "cleared"])
