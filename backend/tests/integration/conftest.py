@@ -9,13 +9,18 @@ from __future__ import annotations
 
 import os
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, make_url
 
+from app.clock import FixedClock
+from app.config import Settings
 from app.db.session import make_engine
+from app.main import create_app
 from tests.integration.database import downgrade, migrate
 
 POSTGRES_URL_VARIABLE = "MEDITRACK_TEST_POSTGRES_URL"
@@ -68,3 +73,17 @@ def engine(empty_engine: Engine) -> Engine:
     """An engine on a database migrated to the latest revision."""
     migrate(empty_engine)
     return empty_engine
+
+
+@pytest.fixture
+def clock() -> FixedClock:
+    return FixedClock(datetime(2026, 11, 2, 5, 30, tzinfo=UTC))
+
+
+@pytest.fixture
+def api(engine: Engine, database_url: str, clock: FixedClock) -> Iterator[TestClient]:
+    """The app on a migrated database, with a fixed clock."""
+    settings = Settings(database_url=database_url, environment="test", version="test-sha")
+    # raise_server_exceptions=False: assert on the 500 response, not the raised error.
+    with TestClient(create_app(settings, clock), raise_server_exceptions=False) as client:
+        yield client
