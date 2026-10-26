@@ -1,0 +1,45 @@
+/* The transparent border keeps the badge edge visible in Windows High Contrast mode. */
+.badge {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-thin) solid transparent;
+  border-radius: var(--radius-control);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h2);
+  white-space: nowrap;
+}
+
+.icon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.upcoming {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.due {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.missed {
+  border: var(--border-input) solid var(--color-warning);
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
+}
+
+.taken {
+  background: var(--color-success-subtle);
+  color: var(--color-success);
+}
+
+.skipped {
+  background: var(--color-neutral-subtle);
+  color: var(--color-text-secondary);
+}

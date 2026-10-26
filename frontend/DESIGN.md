@@ -1,6 +1,6 @@
 # MediTrack frontend: design brief
 
-Status: **approved by the Lead on 2026-10-26 (Phase A)**, with the notes recorded in [§8](#8-decisions). DD-3 and DD-5 to DD-12 are approved or rejected one by one in the MT-020 pull request.
+Status: **approved by the Lead on 2026-10-26 (Phase A)**, with the notes recorded in [§8](#8-decisions). DD-3 and DD-5 to DD-12 were approved as written in the MT-020 pull request (#49).
 Owner: Frontend agent · Scope: `frontend/**` only
 
 This brief turns the approved spec into concrete design decisions for the web app. On behaviour, the spec wins: [requirements](../docs/requirements.md), [acceptance criteria](../docs/acceptance-criteria.md), [the API contract](../api/openapi.yaml) and [the frontend agent prompt](../prompts/frontend-agent.md). Where this brief adds a rule the spec doesn't spell out, it is listed in [§8](#8-decisions) with the Lead's decision.
@@ -1138,9 +1138,9 @@ The percentage is shown with one decimal place, as the API returns it ("50.0%").
 | Q1: dose notes | **Out of v1.** No note field in the UI. FR-05 notes are API-only in v1; docs follow-up in issue #42. |
 | Q2: font | **Device built-in fonts.** No web font. |
 | Copy | All strings in `src/copy.ts`; the AC-38 copy-safety test reads that file, so new strings are checked automatically. |
-| DD-3, DD-5 to DD-12 | Listed one line each in the MT-020 pull request and approved or rejected there ([§8.2](#82-rules-decided-in-the-mt-020-pull-request)). |
+| DD-3, DD-5 to DD-12 | **Approved as written** in the MT-020 pull request (#49) ([§8.2](#82-rules-approved-in-the-mt-020-pull-request)). |
 
-### 8.2 Rules decided in the MT-020 pull request
+### 8.2 Rules approved in the MT-020 pull request
 
 | # | Decision | Why |
 |---|---|---|

@@ -1,11 +1,14 @@
 import { http, HttpResponse, type JsonBodyType } from 'msw'
 import type { Problem } from '../api/client'
-import { patients, TRACE_ID } from './data'
+import type { PlannedDose } from '../api/doses'
+import type { Patient } from '../api/patients'
+import type { components } from '../api/schema'
+import { dayA, MOCK_DATE, MOCK_NOW, patientA, patients, TRACE_ID } from './data'
 
 // Every API response carries X-Trace-Id (contract, NFR-10).
 const traceHeaders = { 'X-Trace-Id': TRACE_ID }
 
-function json(body: JsonBodyType, status = 200) {
+export function json(body: JsonBodyType, status = 200) {
   return HttpResponse.json(body, { status, headers: traceHeaders })
 }
 
@@ -18,10 +21,23 @@ export function problem(status: number, code: Problem['code'], title: string) {
   })
 }
 
+/** The `GET /patients/{id}/doses` body for a patient's mock day. */
+export function dayOf(patient: Patient, doses: PlannedDose[]): components['schemas']['DayDoses'] {
+  return { patient_id: patient.id, date: MOCK_DATE, timezone: patient.timezone, generated_at: MOCK_NOW, doses }
+}
+
+const findPatient = (id: unknown) => patients.find((patient) => patient.id === id)
+const patientNotFound = () => problem(404, 'NOT_FOUND', 'Patient not found')
+
 export const handlers = [
   http.get('/api/v1/patients', () => json(patients)),
   http.get('/api/v1/patients/:patientId', ({ params }) => {
-    const patient = patients.find((p) => p.id === params.patientId)
-    return patient === undefined ? problem(404, 'NOT_FOUND', 'Patient not found') : json(patient)
+    const patient = findPatient(params.patientId)
+    return patient === undefined ? patientNotFound() : json(patient)
+  }),
+  http.get('/api/v1/patients/:patientId/doses', ({ params }) => {
+    const patient = findPatient(params.patientId)
+    if (patient === undefined) return patientNotFound()
+    return json(dayOf(patient, patient.id === patientA.id ? dayA : []))
   }),
 ]

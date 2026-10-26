@@ -25,6 +25,13 @@ ul {
   margin: 0;
 }
 
+/* Balanced lines, so a wrapped heading never leaves one word on its own line. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
 h1 {
   font-size: var(--font-size-h1);
   line-height: var(--line-height-heading);

@@ -7,7 +7,8 @@ export default defineConfig({
   testDir: './screenshots',
   outputDir: './test-results',
   reporter: 'list',
-  use: { baseURL: `http://localhost:${port}` },
+  // A fixed browser timezone that differs from the demo patients', so screenshots are repeatable.
+  use: { baseURL: `http://localhost:${port}`, timezoneId: 'Europe/London' },
   webServer: {
     command: `npm run dev:mock -- --port ${port} --strictPort`,
     url: `http://localhost:${port}`,
