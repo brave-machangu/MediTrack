@@ -15,7 +15,7 @@ The rest of this note follows these decisions.
 | Q2 | When do two schedules overlap "on a shared weekday"? | **When at least one calendar date lies in both date ranges and its weekday is in both `days_of_week`.** Mon/Wed and Tue/Thu schedules of one medication don't overlap. Neither do schedules that share a weekday but whose common date range never reaches it. | Unit + integration tests (§7) |
 | Q3 | A schedule has logs, and a PATCH resends unchanged fields with a new `end_date`. | **Only fields whose value changes** count towards 409 `SCHEDULE_HAS_LOGS`. `end_date: null` (reopen) is allowed. **Condition:** extending or clearing `end_date` still runs the overlap check, and returns 409 `SCHEDULE_OVERLAP` if it would collide with a later schedule. | Tests for extending and for clearing (§7) |
 | Q4 | Malformed ID in a path (`/api/v1/patients/abc`) | **404 `NOT_FOUND`.** A malformed ID can't name an existing resource, and `getPatient`, `getMedication`, `deleteSchedule` and `deleteDoseLog` don't document 422. | Contract-change issue #44 (one line in the contract description) |
-| Q5 | Environment variable names | PR #40's author renames `APP_ENV` → `MEDITRACK_ENV` and `APP_VERSION` → `MEDITRACK_VERSION` **in #40, before it merges**. `DATABASE_URL` keeps its conventional name (§6). | None for later tasks |
+| Q5 | Environment variable names | Rename `APP_ENV` → `MEDITRACK_ENV` and `APP_VERSION` → `MEDITRACK_VERSION`. `DATABASE_URL` keeps its conventional name (§6). | #40 merged without it; done in the follow-up PR on branch `mt-010-env-prefix` |
 | Q6 | Dependencies beyond the fixed stack | **Approved:** `tzdata` and `psycopg[binary]` (runtime), `hypothesis` (dev), OpenTelemetry in MT-022. | §8 |
 | Q7 | Fault image label for MT-023 | The **Platform build step** adds `docker build --label meditrack.fault=true` when the fault rate is > 0. The Dockerfile only passes the build arg on to the app. | Backlog issue #45 (MT-023 and MT-032 criteria) |
 | — | `hide_parameters=True` on the engine | **Adopted**, with a test showing a database error log contains no canary value. | MT-013 (§9) |
@@ -149,24 +149,31 @@ All pure and fully typed. Instants are aware UTC `datetime`s, and `now` is alway
 
 ```python
 # app/domain/types.py
-class DoseStatus(StrEnum): UPCOMING, DUE, MISSED, TAKEN, SKIPPED   # values as in the contract
-class LogStatus(StrEnum): TAKEN, SKIPPED
+class DoseStatus(StrEnum):
+    UPCOMING, DUE, MISSED, TAKEN, SKIPPED  # values as in the contract
+
+
+class LogStatus(StrEnum):
+    TAKEN, SKIPPED
+
 
 @dataclass(frozen=True, slots=True)
 class DoseRules:
-    early_log_window: timedelta      # Settings.early_log_window_minutes, default 60
-    late_log_limit: timedelta        # Settings.late_log_limit_minutes, default 1440
+    early_log_window: timedelta  # Settings.early_log_window_minutes, default 60
+    late_log_limit: timedelta  # Settings.late_log_limit_minutes, default 1440
+
 
 @dataclass(frozen=True, slots=True)
 class ScheduleRule:
     schedule_id: UUID
     medication_id: UUID
     times_of_day: tuple[time, ...]
-    days_of_week: frozenset[int]     # ISO, 1 = Monday
+    days_of_week: frozenset[int]  # ISO, 1 = Monday
     start_date: date
-    end_date: date | None            # inclusive; None = no end
+    end_date: date | None  # inclusive; None = no end
     grace: timedelta
     medication_deactivated_at: datetime | None
+
 
 @dataclass(frozen=True, slots=True)
 class LoggedDose:
@@ -177,29 +184,37 @@ class LoggedDose:
     recorded_at: datetime
     late: bool
 
+
 @dataclass(frozen=True, slots=True)
 class PlannedDose:
     schedule_id: UUID
     medication_id: UUID
     scheduled_for: datetime
-    local_date: date                 # local date of scheduled_for (Q1)
-    local_time: str                  # "HH:MM" of scheduled_for in the patient's zone
+    local_date: date  # local date of scheduled_for (Q1)
+    local_time: str  # "HH:MM" of scheduled_for in the patient's zone
     status: DoseStatus
     late: bool
     log_window_opens_at: datetime
     log_window_closes_at: datetime
-    log: LoggedDose | None           # gives dose_log_id and recorded_at
+    log: LoggedDose | None  # gives dose_log_id and recorded_at
+
 
 @dataclass(frozen=True, slots=True)
-class ScheduleSpan:                  # what the overlap rule needs
-    schedule_id: UUID | None         # None while creating
+class ScheduleSpan:  # what the overlap rule needs
+    schedule_id: UUID | None  # None while creating
     days_of_week: frozenset[int]
     start_date: date
     end_date: date | None
 
+
 @dataclass(frozen=True, slots=True)
 class DailySummary:
-    planned: int; taken: int; taken_late: int; skipped: int; missed: int; pending: int
+    planned: int
+    taken: int
+    taken_late: int
+    skipped: int
+    missed: int
+    pending: int
     adherence_percent: Decimal | None
 ```
 
@@ -274,7 +289,7 @@ One table in `app/errors.py` maps each `DomainError` subclass to an HTTP status,
 | `find_overlap` result (create and PATCH) | `ScheduleOverlap` | 409 | `SCHEDULE_OVERLAP`, `detail` = the contract example text |
 | Patient timezone change with logs | `PatientHasLogs` | 409 | `PATIENT_HAS_LOGS` |
 | Database unreachable: `OperationalError`, pool `TimeoutError`, `DBAPIError` with `connection_invalidated` | — | 503 | `SERVICE_UNAVAILABLE`, `Retry-After: 5` |
-| Starlette routing | `HTTPException` 404 / 405 | 404 / 405 | `NOT_FOUND` / `VALIDATION_ERROR` (the contract has no code for 405) |
+| Starlette routing | `HTTPException` 404 / 405 | 404 / 405 | `NOT_FOUND` / `METHOD_NOT_ALLOWED` with an `Allow` header listing every method of the path (contract change #47) |
 | MT-023 fault injection | `InjectedFault` | 500 | `INTERNAL_ERROR` |
 | Anything else, including any other `IntegrityError` | `Exception` | 500 | `INTERNAL_ERROR` |
 
@@ -387,12 +402,12 @@ AC-30 (data survives a restart) is the Platform agent's Compose smoke test. `tes
 
 ## 9. Changes needed in the MT-010 scaffold (PR #40)
 
-PR #40 meets most of the bar. Its author makes item 1 in #40 before it merges (Q5). This session makes the rest, in the task named for each:
+PR #40 meets most of the bar. #40 merged without item 1, so a small follow-up PR makes it. This session makes the rest, in the task named for each:
 
-1. Q5 rename: `APP_ENV` → `MEDITRACK_ENV`, `APP_VERSION` → `MEDITRACK_VERSION`. **In #40, by its author.**
+1. Q5 rename: `APP_ENV` → `MEDITRACK_ENV`, `APP_VERSION` → `MEDITRACK_VERSION`, plus the README's explicit `--host 0.0.0.0 --port 8000`: follow-up PR `mt-010-env-prefix`.
 2. MT-011: add `tzdata` (runtime), and `pytest-cov` and `hypothesis` (dev).
 3. MT-013: `make_engine` gets `hide_parameters=True`. Otherwise SQLAlchemy puts bound values, such as names and notes, into exception text that can reach logs (security §2, rule 3). It also gets `PRAGMA foreign_keys=ON` for SQLite, and the canary test from §7. Add `psycopg[binary]` here too.
-4. MT-014, the first task that touches `app/errors.py`: replace its two unexplained `Any`s, typing the problem body with a `TypedDict` and the location tuple as `tuple[int | str, ...]`. Same task: malformed path IDs → 404 (Q4). The README run command gets an explicit `--host 0.0.0.0 --port 8000` in whichever of these tasks first edits the README.
+4. MT-014, the first task that touches `app/errors.py`: replace its two unexplained `Any`s, typing the problem body with a `TypedDict` and the location tuple as `tuple[int | str, ...]`. Same task: malformed path IDs → 404 (Q4).
 
 ## 10. Gotchas recorded for later tasks
 
