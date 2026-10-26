@@ -2,6 +2,7 @@ import { delay, http, type RequestHandler } from 'msw'
 import { problem } from './handlers'
 
 const todayDoses = '/api/v1/patients/:patientId/doses'
+const missedDoses = '/api/v1/patients/:patientId/missed-doses'
 const doseLogs = '/api/v1/dose-logs'
 const medications = '/api/v1/patients/:patientId/medications'
 const patientList = '/api/v1/patients'
@@ -18,6 +19,12 @@ export const scenarios: Record<string, () => RequestHandler[]> = {
     }),
   ],
   'today-error': () => [http.get(todayDoses, outage)],
+  'missed-loading': () => [
+    http.get(missedDoses, async () => {
+      await delay('infinite')
+    }),
+  ],
+  'missed-error': () => [http.get(missedDoses, outage)],
   'record-slow': () => [
     http.post(doseLogs, async () => {
       await delay('infinite')

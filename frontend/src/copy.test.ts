@@ -29,6 +29,10 @@ describe('UI copy (src/copy.ts)', () => {
     expect(requirements).toContain(copy.app.disclaimer)
   })
 
+  it("insets only the disclaimer's last sentence on Missed doses, word for word (DD-4, AC-38)", () => {
+    expect(copy.app.disclaimer.endsWith(` ${copy.app.disclaimerInset}`)).toBe(true)
+  })
+
   it('uses the demo banner from FR-13 word for word (AC-40)', () => {
     expect(requirements).toContain(copy.app.demoBanner)
   })

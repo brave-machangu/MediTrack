@@ -63,12 +63,18 @@ const iso = (ms: number) => new Date(ms).toISOString().replace('.000Z', 'Z')
 type DoseLog = components['schemas']['DoseLog']
 
 /** A planned dose with no record. `status` is what the server reports while nothing is logged. */
-function planned(med: MedicationFields, localTime: string, scheduledFor: string, status: PlannedDose['status']): PlannedDose {
+function planned(
+  med: MedicationFields,
+  localTime: string,
+  scheduledFor: string,
+  status: PlannedDose['status'],
+  localDate = MOCK_DATE,
+): PlannedDose {
   const scheduled = Date.parse(scheduledFor)
   return {
     ...med,
     scheduled_for: scheduledFor,
-    local_date: MOCK_DATE,
+    local_date: localDate,
     local_time: localTime,
     status,
     late: false,
@@ -99,6 +105,17 @@ const beta2100 = planned(beta, '21:00', '2026-10-26T19:00:00Z', 'upcoming')
 
 /** Demo Patient A's planned doses at MOCK_NOW, before any records. */
 export const plannedA = [gamma0600, alpha0700, beta0730, delta0830, gamma0900, alpha1400, beta2100]
+
+/**
+ * Demo Patient A's unrecorded doses from earlier days, newest first. At MOCK_NOW only Sunday's 14:00 can
+ * still be recorded (its window closes 24 hours after the dose); 15 October is outside the default 7 days.
+ */
+export const pastMissedA = [
+  planned(alpha, '14:00', '2026-10-25T12:00:00Z', 'missed', '2026-10-25'),
+  planned(beta, '21:00', '2026-10-22T19:00:00Z', 'missed', '2026-10-22'),
+  planned(gamma, '06:00', '2026-10-20T04:00:00Z', 'missed', '2026-10-20'),
+  planned(beta, '07:30', '2026-10-15T05:30:00Z', 'missed', '2026-10-15'),
+]
 
 function seedLog(dose: PlannedDose, id: string, status: DoseLog['status'], recordedAt: string, late: boolean): DoseLog {
   return { id, schedule_id: dose.schedule_id, scheduled_for: dose.scheduled_for, status, recorded_at: recordedAt, late, note: null }

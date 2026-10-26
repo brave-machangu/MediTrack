@@ -8,9 +8,14 @@ const calendarDate = new Intl.DateTimeFormat(locale, {
   timeZone: 'UTC',
 })
 
-/** A patient-local calendar date ("2026-10-26") as "Monday 26 October". It carries no timezone, so it is read as UTC. */
-export function formatDate(isoDate: string): string {
-  return calendarDate.format(new Date(`${isoDate}T00:00:00Z`))
+/**
+ * A patient-local calendar date ("2026-10-26") as "Monday 26 October". It carries no timezone, so it is read as UTC.
+ * Given the patient's current year, a date in another year gets it ("Monday 29 December 2025", DD-6); en-GB's own
+ * year format would add a comma after the weekday.
+ */
+export function formatDate(isoDate: string, currentYear?: string): string {
+  const date = calendarDate.format(new Date(`${isoDate}T00:00:00Z`))
+  return currentYear === undefined || isoDate.startsWith(currentYear) ? date : `${date} ${isoDate.slice(0, 4)}`
 }
 
 const dayMonth = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', timeZone: 'UTC' })

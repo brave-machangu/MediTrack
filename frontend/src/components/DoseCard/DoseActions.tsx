@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { isLogWindowOpen, type PlannedDose } from '../../api/doses'
+import { isLogWindowOpen, type DoseLog, type PlannedDose } from '../../api/doses'
 import { copy } from '../../copy'
 import { formatTime } from '../../dates'
 import { Button } from '../Button/Button'
@@ -14,11 +14,12 @@ type Props = {
   timeZone: string
   at: Date
   focusHeading: () => void
+  onRecordChange: ((log: DoseLog | null) => void) | undefined
 }
 
 /** Taken / Skipped, the result with Undo, and every failure for one dose. Shows only what the server confirmed. */
-export function DoseActions({ dose, patientId, timeZone, at, focusHeading }: Props) {
-  const actions = useDoseActions(dose, patientId, focusHeading)
+export function DoseActions({ dose, patientId, timeZone, at, focusHeading, onRecordChange }: Props) {
+  const actions = useDoseActions(dose, patientId, focusHeading, onRecordChange)
   const { record, undo, focusIf } = actions
   const context = <span className="visually-hidden">{copy.dose.context(dose.medication_name, dose.local_time)}</span>
   const windowOpen = isLogWindowOpen(dose, at)

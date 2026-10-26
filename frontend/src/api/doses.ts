@@ -4,20 +4,37 @@ import type { components } from './schema'
 
 export type PlannedDose = components['schemas']['PlannedDose']
 type DayDoses = components['schemas']['DayDoses']
-type DoseLog = components['schemas']['DoseLog']
+export type DoseLog = components['schemas']['DoseLog']
 export type DoseLogCreate = components['schemas']['DoseLogCreate']
 
 /** Today, Missed doses and Daily summary keys all start with this, so one invalidation refreshes them together. */
 const doseDataKey = (patientId: string) => ['dose-data', patientId] as const
 const todayKey = (patientId: string) => [...doseDataKey(patientId), 'today'] as const
+const missedKey = (patientId: string) => [...doseDataKey(patientId), 'missed'] as const
 
-/** Planned doses for the patient's local today. No `date` is sent, so the server picks the patient's today (AC-09). */
+// No `date` is sent, so the server picks the patient's today (AC-09).
+const fetchToday = (patientId: string) => request<DayDoses>(`/api/v1/patients/${encodeURIComponent(patientId)}/doses`)
+
+/** Planned doses for the patient's local today. */
 export function useTodayDoses(patientId: string) {
   return useQuery({
     queryKey: todayKey(patientId),
-    queryFn: () => request<DayDoses>(`/api/v1/patients/${encodeURIComponent(patientId)}/doses`),
+    queryFn: () => fetchToday(patientId),
     // Statuses change with time and only the server may change them (DD-5).
     refetchInterval: 60_000,
+  })
+}
+
+/** The patient's local today ("2026-10-26") from the Today query (DD-7), sharing its cache but not its 60-second refetch. */
+export function usePatientToday(patientId: string) {
+  return useQuery({ queryKey: todayKey(patientId), queryFn: () => fetchToday(patientId), select: (day) => day.date })
+}
+
+/** Unrecorded doses past their grace period, newest first. No range is sent, so the server covers the last 7 days (AC-22). */
+export function useMissedDoses(patientId: string) {
+  return useQuery({
+    queryKey: [...missedKey(patientId), 'last-7-days'],
+    queryFn: () => request<PlannedDose[]>(`/api/v1/patients/${encodeURIComponent(patientId)}/missed-doses`),
   })
 }
 
@@ -32,9 +49,11 @@ export function useRecordDose(patientId: string) {
     mutationFn: (body: DoseLogCreate) => request<DoseLog>('/api/v1/dose-logs', { method: 'POST', body }),
     // A 201 is the server's confirmation (NFR-08), so its record is shown at once; the refetch then confirms it.
     onSuccess: (log) => {
+      const recorded = (dose: PlannedDose) => (isFor(log, dose) ? withRecord(dose, log) : dose)
       queryClient.setQueryData<DayDoses>(todayKey(patientId), (day) =>
-        day === undefined ? day : { ...day, doses: day.doses.map((dose) => (isFor(log, dose) ? withRecord(dose, log) : dose)) },
+        day === undefined ? day : { ...day, doses: day.doses.map(recorded) },
       )
+      queryClient.setQueriesData<PlannedDose[]>({ queryKey: missedKey(patientId) }, (doses) => doses?.map(recorded))
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: doseDataKey(patientId) }),
   })
@@ -44,7 +63,7 @@ const isFor = (log: DoseLog, dose: PlannedDose) =>
   log.schedule_id === dose.schedule_id && log.scheduled_for === dose.scheduled_for
 
 /** The dose as the server reports it once this record exists; status and `late` come from the server. */
-const withRecord = (dose: PlannedDose, log: DoseLog): PlannedDose => ({
+export const withRecord = (dose: PlannedDose, log: DoseLog): PlannedDose => ({
   ...dose,
   status: log.status,
   late: log.late,

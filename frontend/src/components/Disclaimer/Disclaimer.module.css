@@ -1,0 +1,7 @@
+/* Set apart like an info notice, but not a live region: it's there when the page opens. */
+.inset {
+  padding: var(--space-4);
+  border-left: var(--border-bar) solid var(--color-accent);
+  border-radius: var(--radius-panel);
+  background: var(--color-accent-subtle);
+}

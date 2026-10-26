@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { ApiError } from '../../api/client'
-import { useRecordDose, useUndoDose, type DoseLogCreate, type PlannedDose } from '../../api/doses'
+import { useRecordDose, useUndoDose, type DoseLog, type DoseLogCreate, type PlannedDose } from '../../api/doses'
 
 type FocusTarget = 'result' | 'error' | 'taken' | null
 
@@ -16,7 +16,12 @@ export const isRetryable = (error: unknown) =>
   error instanceof ApiError && (error.kind !== 'problem' || (error.status ?? 500) >= 500)
 
 /** State and handlers behind DoseActions: one record or undo at a time, and where focus goes afterwards. */
-export function useDoseActions(dose: PlannedDose, patientId: string, focusHeading: () => void) {
+export function useDoseActions(
+  dose: PlannedDose,
+  patientId: string,
+  focusHeading: () => void,
+  onRecordChange?: (log: DoseLog | null) => void,
+) {
   const record = useRecordDose(patientId)
   const undo = useUndoDose(patientId)
   // Stops a double tap that lands before React re-renders the disabled buttons (AC-21).
@@ -33,8 +38,9 @@ export function useDoseActions(dose: PlannedDose, patientId: string, focusHeadin
     record.mutate(
       { schedule_id: dose.schedule_id, scheduled_for: dose.scheduled_for, status },
       {
-        onSuccess: () => {
+        onSuccess: (log) => {
           setFocusTarget('result')
+          onRecordChange?.(log)
         },
         onError: (error) => {
           setFocusTarget(isDuplicate(error) ? 'result' : 'error')
@@ -56,6 +62,7 @@ export function useDoseActions(dose: PlannedDose, patientId: string, focusHeadin
       onSuccess: () => {
         setUndone(true)
         focusHeading()
+        onRecordChange?.(null)
       },
       onError: () => {
         setFocusTarget('error')

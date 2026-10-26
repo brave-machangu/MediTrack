@@ -18,6 +18,8 @@ describe('dates', () => {
   it('leaves out the year unless it differs from the current one (DD-6)', () => {
     expect(formatShortDate('2026-10-01', '2026')).toBe('1 October')
     expect(formatShortDate('2025-12-31', '2026')).toBe('31 December 2025')
+    expect(formatDate('2026-10-26', '2026')).toBe('Monday 26 October')
+    expect(formatDate('2025-12-29', '2026')).toBe('Monday 29 December 2025')
   })
 
   it('finds the patient-local date of an instant', () => {
