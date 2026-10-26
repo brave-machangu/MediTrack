@@ -1110,6 +1110,7 @@ Words used: dose, medication, schedule, taken, skipped, missed, record. Words ne
 | `summary.show` | Show summary | |
 | `summary.adherence` | Adherence | |
 | `summary.adherenceExplain` | Doses recorded as taken, out of all doses taken, skipped or missed. | |
+| `summary.percent` | {value}% | `adherence_percent` with one decimal place, as the API returns it |
 | `summary.noScore` | No doses to score yet | AC-26, verbatim |
 | `summary.noScoreExplain` | Adherence is shown once a dose is taken, skipped or missed. | |
 | `summary.tableCaption` | Doses on {date} | |

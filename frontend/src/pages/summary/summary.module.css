@@ -1,0 +1,66 @@
+.page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.day {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.adherence {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.percent {
+  font-size: var(--font-size-h1);
+  line-height: var(--line-height-heading);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.noScore {
+  font-weight: var(--font-weight-bold);
+}
+
+.note {
+  color: var(--color-text-secondary);
+}
+
+/* Narrow enough that each count stays close to its label on a wide screen. */
+.table {
+  width: 100%;
+  max-width: 30rem;
+  border-collapse: collapse;
+}
+
+.table caption {
+  padding-bottom: var(--space-2);
+  font-weight: var(--font-weight-bold);
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-thin) solid var(--color-border);
+  font-weight: var(--font-weight-regular);
+  text-align: left;
+}
+
+/* Counts line up on the right, digit under digit. */
+.table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Of which taken late" is part of Taken, so it sits indented under it. */
+.table .part {
+  padding-left: var(--space-5);
+}
