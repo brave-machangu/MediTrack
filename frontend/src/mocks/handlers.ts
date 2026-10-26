@@ -4,7 +4,19 @@ import type { PlannedDose } from '../api/doses'
 import type { Patient } from '../api/patients'
 import type { components } from '../api/schema'
 import { now } from '../clock'
-import { isLogFor, MOCK_DATE, MOCK_NOW, patientA, patients, plannedA, seedLogsA, TRACE_ID, withLog } from './data'
+import {
+  isLogFor,
+  medicationsA,
+  MOCK_DATE,
+  MOCK_NOW,
+  patientA,
+  patients,
+  plannedA,
+  seedLogsA,
+  stoppedA,
+  TRACE_ID,
+  withLog,
+} from './data'
 
 type DoseLog = components['schemas']['DoseLog']
 type DoseLogCreate = components['schemas']['DoseLogCreate']
@@ -81,6 +93,13 @@ export const handlers = [
     const patient = findPatient(params.patientId)
     if (patient === undefined) return patientNotFound()
     return json(dayOf(patient, patient.id === patientA.id ? dayA() : []))
+  }),
+  http.get('/api/v1/patients/:patientId/medications', ({ params, request }) => {
+    const patient = findPatient(params.patientId)
+    if (patient === undefined) return patientNotFound()
+    const includeInactive = new URL(request.url).searchParams.get('include_inactive') === 'true'
+    const all = patient.id === patientA.id ? [...medicationsA, stoppedA] : []
+    return json(all.filter((med) => includeInactive || med.active).sort((a, b) => a.name.localeCompare(b.name)))
   }),
   http.post<never, DoseLogCreate>('/api/v1/dose-logs', async ({ request }) => recordMockDose(await request.json())),
   http.delete('/api/v1/dose-logs/:doseLogId', ({ params }) => {

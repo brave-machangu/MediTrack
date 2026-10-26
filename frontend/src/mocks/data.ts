@@ -26,30 +26,30 @@ export const patientB: Patient = {
 
 export const patients = [patientA, patientB]
 
-type Medication = Pick<PlannedDose, 'medication_id' | 'schedule_id' | 'medication_name' | 'dosage_label' | 'instructions'>
+type MedicationFields = Pick<PlannedDose, 'medication_id' | 'schedule_id' | 'medication_name' | 'dosage_label' | 'instructions'>
 
-const alpha: Medication = {
+const alpha: MedicationFields = {
   medication_id: '0d6b8a52-7c3e-4f1a-8b2d-1e5f9c3a7b01',
   schedule_id: '5a1e7c93-2b4d-4e6f-9a8c-3d7b1f5e9c01',
   medication_name: 'Demo Med Alpha',
   dosage_label: '500 mg, 1 tablet',
   instructions: 'With food',
 }
-const beta: Medication = {
+const beta: MedicationFields = {
   medication_id: '0d6b8a52-7c3e-4f1a-8b2d-1e5f9c3a7b02',
   schedule_id: '5a1e7c93-2b4d-4e6f-9a8c-3d7b1f5e9c02',
   medication_name: 'Demo Med Beta',
   dosage_label: '1 tablet',
   instructions: null,
 }
-const gamma: Medication = {
+const gamma: MedicationFields = {
   medication_id: '0d6b8a52-7c3e-4f1a-8b2d-1e5f9c3a7b03',
   schedule_id: '5a1e7c93-2b4d-4e6f-9a8c-3d7b1f5e9c03',
   medication_name: 'Demo Med Gamma',
   dosage_label: '2 drops',
   instructions: null,
 }
-const delta: Medication = {
+const delta: MedicationFields = {
   medication_id: '0d6b8a52-7c3e-4f1a-8b2d-1e5f9c3a7b04',
   schedule_id: '5a1e7c93-2b4d-4e6f-9a8c-3d7b1f5e9c04',
   medication_name: 'Demo Med Delta Extended Release Capsules',
@@ -63,7 +63,7 @@ const iso = (ms: number) => new Date(ms).toISOString().replace('.000Z', 'Z')
 type DoseLog = components['schemas']['DoseLog']
 
 /** A planned dose with no record. `status` is what the server reports while nothing is logged. */
-function planned(med: Medication, localTime: string, scheduledFor: string, status: PlannedDose['status']): PlannedDose {
+function planned(med: MedicationFields, localTime: string, scheduledFor: string, status: PlannedDose['status']): PlannedDose {
   const scheduled = Date.parse(scheduledFor)
   return {
     ...med,
@@ -116,3 +116,51 @@ export const dayA: PlannedDose[] = plannedA.map((dose) => {
   const log = seedLogsA.find((seed) => isLogFor(seed, dose))
   return log === undefined ? dose : withLog(dose, log)
 })
+
+type Medication = components['schemas']['Medication']
+type Schedule = components['schemas']['Schedule']
+
+function medication(med: MedicationFields, plan: Omit<Schedule, 'id' | 'medication_id'>): Medication {
+  return {
+    id: med.medication_id,
+    patient_id: patientA.id,
+    name: med.medication_name,
+    dosage_label: med.dosage_label,
+    instructions: med.instructions ?? null,
+    active: true,
+    deactivated_at: null,
+    created_at: '2026-10-01T06:00:00Z',
+    schedules: [{ id: med.schedule_id, medication_id: med.medication_id, ...plan }],
+  }
+}
+
+const everyDay = [1, 2, 3, 4, 5, 6, 7]
+
+/** A schedule with the default 60-minute grace period. */
+function schedule(times: string[], days: number[], start: string, end: string | null, hasLogs: boolean) {
+  return { times_of_day: times, days_of_week: days, start_date: start, end_date: end, grace_period_minutes: 60, has_dose_logs: hasLogs }
+}
+
+/** Demo Patient A's medications, matching the planned doses above. Ordered by name, as the API returns them. */
+export const medicationsA: Medication[] = [
+  medication(alpha, schedule(['07:00', '14:00'], everyDay, '2026-10-01', null, true)),
+  medication(beta, schedule(['07:30', '21:00'], [1, 2, 3, 4, 5], '2026-10-01', null, true)),
+  medication(delta, schedule(['08:30'], everyDay, '2026-10-26', null, false)),
+  medication(gamma, schedule(['06:00', '09:00'], everyDay, '2026-10-01', null, true)),
+]
+
+/** A medication that was stopped on 12 October; it appears only with "Show stopped medications". */
+export const stoppedA: Medication = {
+  ...medication(
+    {
+      medication_id: '0d6b8a52-7c3e-4f1a-8b2d-1e5f9c3a7b05',
+      schedule_id: '5a1e7c93-2b4d-4e6f-9a8c-3d7b1f5e9c05',
+      medication_name: 'Demo Med Epsilon',
+      dosage_label: '250 mg, 1 tablet',
+      instructions: null,
+    },
+    schedule(['08:00'], everyDay, '2026-09-01', '2026-10-12', true),
+  ),
+  active: false,
+  deactivated_at: '2026-10-12T08:00:00Z',
+}

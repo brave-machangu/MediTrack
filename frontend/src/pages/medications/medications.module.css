@@ -1,0 +1,75 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* The whole label is the target: at least 44 px tall, box and text together. */
+.toggle {
+  display: inline-flex;
+  gap: var(--space-3);
+  align-items: center;
+  align-self: start;
+  min-height: var(--target-min);
+  cursor: pointer;
+}
+
+.toggle input {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+/* Medications are separated by rules, not boxed in cards (DESIGN.md §6.6). */
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+.list > li {
+  border-bottom: var(--border-thin) solid var(--color-border);
+}
+
+.medication {
+  display: grid;
+  gap: var(--space-4);
+  padding-block: var(--space-5);
+}
+
+.details {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.name {
+  font-size: var(--font-size-h2);
+  line-height: var(--line-height-h2);
+  overflow-wrap: anywhere;
+}
+
+.note {
+  color: var(--color-text-secondary);
+}
+
+/* A quiet label, so the times below it lead. */
+.schedulesTitle {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  color: var(--color-text-secondary);
+}
+
+.schedules {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.times {
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
