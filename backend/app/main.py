@@ -12,7 +12,7 @@ from datetime import timedelta
 from fastapi import FastAPI
 from starlette.routing import Route
 
-from app.api import doses, health, medications, patients, schedules
+from app.api import doses, health, medications, patients, reports, schedules
 from app.api.deps import AppContext
 from app.clock import Clock, SystemClock
 from app.config import Settings
@@ -56,6 +56,7 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         medications.router,
         schedules.router,
         doses.router,
+        reports.router,
     )
     for router in routers:
         app.include_router(router)

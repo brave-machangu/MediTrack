@@ -30,6 +30,7 @@ from app.db.repositories import ScheduleRow
 from app.domain.types import DoseStatus, LogStatus
 from app.services.doses import DayView, DoseView
 from app.services.medications import MedicationView
+from app.services.reports import AdherenceView
 
 
 @cache
@@ -286,4 +287,35 @@ class DoseLogOut(BaseModel):
             recorded_at=log.recorded_at,
             late=log.late,
             note=log.note,
+        )
+
+
+class DailyAdherenceOut(BaseModel):
+    patient_id: UUID
+    date: dt.date  # dt. because the field itself is called date
+    timezone: str
+    planned: int
+    taken: int
+    taken_late: int
+    skipped: int
+    missed: int
+    pending: int
+    # A JSON number: the Decimal (half-up, one decimal place) becomes a float only here.
+    adherence_percent: float | None
+
+    @classmethod
+    def from_view(cls, view: AdherenceView) -> Self:
+        summary = view.summary
+        percent = summary.adherence_percent
+        return cls(
+            patient_id=view.patient.id,
+            date=view.local_date,
+            timezone=view.patient.timezone,
+            planned=summary.planned,
+            taken=summary.taken,
+            taken_late=summary.taken_late,
+            skipped=summary.skipped,
+            missed=summary.missed,
+            pending=summary.pending,
+            adherence_percent=None if percent is None else float(percent),
         )

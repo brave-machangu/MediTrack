@@ -186,6 +186,13 @@ def _http_problem(request: Request, exc: Exception, routes: Sequence[Route]) -> 
             "Method not allowed",
             headers={"Allow": _allowed_methods(request, routes)},
         )
+    if exc.status_code == 400:
+        # FastAPI's answer to a body it can't decode at all. The contract documents 422 for
+        # every invalid request, so this is a validation error like any other.
+        errors: list[FieldError] = [{"field": "request", "message": "body is not valid JSON"}]
+        return problem_response(
+            422, ErrorCode.VALIDATION_ERROR, "Request is invalid", errors=errors
+        )
     if exc.status_code >= 500:
         return problem_response(exc.status_code, ErrorCode.INTERNAL_ERROR, "Internal error")
     return problem_response(exc.status_code, ErrorCode.VALIDATION_ERROR, "Request is invalid")

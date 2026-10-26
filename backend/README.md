@@ -10,6 +10,8 @@ Requires [uv](https://docs.astral.sh/uv/). It installs Python 3.12 (from `.pytho
 cd backend
 uv sync
 uv run alembic upgrade head   # create or update the schema; the app never migrates on start
+uv run python -m app.seed      # synthetic demo data + the alert probe's "Probe Patient"; running it again adds nothing
+uv run python -m app.seed --reset   # replace ALL data with the seed in one transaction (deploys and the nightly reset)
 uv run uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --reload   # http://localhost:8000/healthz
 ```
 
@@ -22,6 +24,7 @@ uv run ruff check .        # lint, incl. the ban on datetime.now()/utcnow()/date
 uv run ruff format --check .
 uv run mypy app            # strict
 uv run pytest              # unit + integration; database tests run on SQLite, and on PostgreSQL if configured
+uv run pytest tests/contract   # the app against ../api/openapi.yaml (Schemathesis + a walk through every operation)
 ```
 
 ### PostgreSQL tests
