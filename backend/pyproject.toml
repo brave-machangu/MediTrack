@@ -1,0 +1,49 @@
+[project]
+name = "meditrack-backend"
+version = "0.1.0"
+description = "MediTrack API: medication reminder and adherence tracker (FastAPI)."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "pydantic-settings>=2.4",
+    "sqlalchemy>=2.0",
+    "uvicorn[standard]>=0.30",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.2",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "TID"]
+
+# AGENTS.md rule 6: time comes from app/clock.py only.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"datetime.datetime.now".msg = "Use app.clock.Clock (AGENTS.md rule 6)."
+"datetime.datetime.utcnow".msg = "Use app.clock.Clock (AGENTS.md rule 6)."
+"datetime.date.today".msg = "Use app.clock.Clock and the patient's timezone (AGENTS.md rule 6)."
+
+[tool.ruff.lint.per-file-ignores]
+"app/clock.py" = ["TID251"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q --import-mode=importlib"
