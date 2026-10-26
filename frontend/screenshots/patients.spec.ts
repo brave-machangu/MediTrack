@@ -45,3 +45,20 @@ test('patients reflow without sideways scrolling at 320 px', async ({ page }) =>
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBe(0)
 })
+
+// WCAG 1.4.10 with the longest name the contract allows (80 characters, no spaces): it wraps in the list,
+// the saved message and the form heading instead of pushing the page sideways.
+test('patients reflow at 320 px with the longest name, its form open', async ({ page }) => {
+  const longName = 'Demo' + 'X'.repeat(76)
+  await page.setViewportSize({ width: 320, height: 900 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Add a patient' }).click()
+  const addForm = page.getByRole('form', { name: 'Add a patient' })
+  await addForm.getByLabel('Name').fill(longName)
+  await addForm.getByRole('button', { name: 'Save patient' }).click()
+  await expect(page.getByText(`${longName} added.`)).toBeVisible()
+  await page.getByRole('button', { name: 'Edit', exact: true }).last().click()
+  await expect(page.getByRole('heading', { name: `Edit ${longName}` })).toBeVisible()
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  expect(overflow).toBe(0)
+})

@@ -34,7 +34,6 @@
   min-height: var(--target-min);
   font-size: var(--font-size-lead);
   font-weight: var(--font-weight-bold);
-  overflow-wrap: anywhere;
 }
 
 .timezone {
