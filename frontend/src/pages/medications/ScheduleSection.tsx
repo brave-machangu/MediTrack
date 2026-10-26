@@ -24,6 +24,8 @@ export function ScheduleSection(props: Props) {
   const { medication, patientId, open, focusIf, cancel, onSaved, openForm, today, currentYear } = props
   const adding = open?.kind === 'add-schedule' && open.medicationId === medication.id
   const formProps = { patientId, medication, defaultStart: today ?? '', onSaved }
+  // Forms that default to the patient's today remount when it arrives, in case one opened first.
+  const todayKey = today ?? 'today-loading'
 
   return (
     <div className={styles.details}>
@@ -40,11 +42,13 @@ export function ScheduleSection(props: Props) {
                   <ScheduleForm {...formProps} schedule={schedule} onCancel={cancel(`edit-schedule-${schedule.id}`)} />
                 ) : formHere === 'change-schedule' ? (
                   <ChangeScheduleForm
+                    key={todayKey}
                     {...{ patientId, medication, schedule, today, currentYear, onSaved }}
                     onCancel={cancel(`change-schedule-${schedule.id}`)}
                   />
                 ) : formHere === 'end-schedule' ? (
                   <EndDateForm
+                    key={todayKey}
                     {...{ patientId, schedule, today, onSaved }}
                     onCancel={cancel(`end-schedule-${schedule.id}`)}
                   />
@@ -63,7 +67,7 @@ export function ScheduleSection(props: Props) {
         </ul>
       )}
       {!medication.active ? null : adding ? (
-        <ScheduleForm {...formProps} onCancel={cancel(`add-schedule-${medication.id}`)} />
+        <ScheduleForm key={todayKey} {...formProps} onCancel={cancel(`add-schedule-${medication.id}`)} />
       ) : (
         <Button
           ref={focusIf(`add-schedule-${medication.id}`)}

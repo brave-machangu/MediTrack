@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { useTodayDoses } from '../../api/doses'
+import { usePatientToday } from '../../api/doses'
 import { useMedications } from '../../api/medications'
 import { usePatient, usePatientId } from '../../api/patients'
 import { Button } from '../../components/Button/Button'
@@ -20,7 +20,7 @@ export function MedicationsPage() {
   const patient = usePatient(patientId)
   const medications = useMedications(patientId)
   // The patient's today, from the server: dates show a year only when it isn't this one (DD-6, DD-7).
-  const today = useTodayDoses(patientId).data
+  const today = usePatientToday(patientId).data
   // Destructured: the hook hands out ref callbacks, and the React lint treats a whole object passed that way as a ref.
   const { open, saved, focusSaved, focusIf, openForm, cancel, onSaved } = useOpenForm<OpenForm>()
   const [showStopped, setShowStopped] = useState(false)
@@ -88,8 +88,8 @@ export function MedicationsPage() {
           cancel={cancel}
           onSaved={onSaved}
           openForm={openForm}
-          timeZone={today?.timezone ?? patient.data?.timezone}
-          today={today?.date}
+          timeZone={patient.data?.timezone}
+          today={today}
         />
         {stopping === undefined ? null : (
           <StopMedicationDialog
@@ -103,7 +103,7 @@ export function MedicationsPage() {
           <DeleteScheduleDialog
             patientId={patientId}
             schedule={deleting}
-            currentYear={today?.date.slice(0, 4)}
+            currentYear={today?.slice(0, 4)}
             onDone={onSaved}
             onCancel={cancel(`delete-schedule-${deleting.id}`)}
           />
