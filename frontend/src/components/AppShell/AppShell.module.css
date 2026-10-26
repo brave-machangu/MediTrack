@@ -1,0 +1,137 @@
+/* Footer sits at the bottom of the window even when a page is short. */
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.inner {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.skipLink {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg);
+  transform: translateY(-200%);
+}
+
+.skipLink:focus {
+  transform: none;
+}
+
+/* Info colour, so the notice reads as separate from the header below it. */
+.demo {
+  background: var(--color-accent-subtle);
+}
+
+.demoInner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding-block: var(--space-3);
+}
+
+.demoIcon {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 0.125rem;
+  color: var(--color-accent);
+}
+
+/* Header and patient navigation read as one band. */
+.top {
+  background: var(--color-bg-subtle);
+  border-bottom: var(--border-thin) solid var(--color-border);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block: var(--space-3);
+}
+
+.appName {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: var(--target-min);
+  font-size: var(--font-size-lead);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.appName:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+.patient {
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.navList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--target-gap);
+  padding-block: 0 var(--space-3);
+  list-style: none;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  min-height: var(--target-min);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-bar) solid transparent;
+  color: var(--color-accent);
+  overflow-wrap: anywhere;
+}
+
+/* Current page: weight, background and a bar, so it doesn't rely on colour alone. */
+.navLink[aria-current='page'] {
+  border-bottom-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+}
+
+.main {
+  flex: 1;
+  padding-block: var(--space-6) var(--space-7);
+}
+
+.footer {
+  border-top: var(--border-thin) solid var(--color-border);
+  background: var(--color-bg-subtle);
+  padding-block: var(--space-5);
+}
+
+@media (min-width: 37.5em) {
+  .header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .navList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding-block: 0;
+  }
+}
