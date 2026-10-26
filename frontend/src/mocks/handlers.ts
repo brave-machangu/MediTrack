@@ -20,6 +20,9 @@ import {
 
 type DoseLog = components['schemas']['DoseLog']
 type DoseLogCreate = components['schemas']['DoseLogCreate']
+type Medication = components['schemas']['Medication']
+type MedicationCreate = components['schemas']['MedicationCreate']
+type MedicationUpdate = components['schemas']['MedicationUpdate']
 
 // Every API response carries X-Trace-Id (contract, NFR-10).
 const traceHeaders = { 'X-Trace-Id': TRACE_ID }
@@ -43,13 +46,15 @@ export function dayOf(patient: Patient, doses: PlannedDose[]): components['schem
   return { patient_id: patient.id, date: MOCK_DATE, timezone: patient.timezone, generated_at: MOCK_NOW, doses }
 }
 
-// Dose records made through the mock API. Tests reset them after each case (src/test/setup.ts).
+// Records and medications changed through the mock API. Tests reset them after each case (src/test/setup.ts).
 let logs: DoseLog[] = []
+let medications: Medication[] = []
 
-export function resetMockLogs() {
+export function resetMockData() {
   logs = [...seedLogsA]
+  medications = [...medicationsA, stoppedA]
 }
-resetMockLogs()
+resetMockData()
 
 function dayA(): PlannedDose[] {
   return plannedA.map((dose) => {
@@ -80,6 +85,26 @@ export function recordMockDose(body: DoseLogCreate) {
   return json(log, 201)
 }
 
+/** The contract's limits for medication fields, as the backend would report them (422). */
+function medicationProblems(body: MedicationUpdate) {
+  const errors: { field: string; message: string }[] = []
+  if (body.name !== undefined && (body.name.trim() === '' || body.name.length > 100)) {
+    errors.push({ field: 'name', message: 'Name must be 1 to 100 characters.' })
+  }
+  if (body.dosage_label !== undefined && (body.dosage_label.trim() === '' || body.dosage_label.length > 100)) {
+    errors.push({ field: 'dosage_label', message: 'Dosage must be 1 to 100 characters.' })
+  }
+  if (body.instructions && body.instructions.length > 500) {
+    errors.push({ field: 'instructions', message: 'Instructions must be 500 characters or fewer.' })
+  }
+  return errors
+}
+
+function validationProblem(errors: { field: string; message: string }[]) {
+  const body: Problem = { type: 'about:blank', title: 'Invalid request', status: 422, code: 'VALIDATION_ERROR', errors, trace_id: TRACE_ID }
+  return HttpResponse.json(body, { status: 422, headers: { ...traceHeaders, 'Content-Type': 'application/problem+json' } })
+}
+
 const findPatient = (id: unknown) => patients.find((patient) => patient.id === id)
 const patientNotFound = () => problem(404, 'NOT_FOUND', 'Patient not found')
 
@@ -98,8 +123,46 @@ export const handlers = [
     const patient = findPatient(params.patientId)
     if (patient === undefined) return patientNotFound()
     const includeInactive = new URL(request.url).searchParams.get('include_inactive') === 'true'
-    const all = patient.id === patientA.id ? [...medicationsA, stoppedA] : []
-    return json(all.filter((med) => includeInactive || med.active).sort((a, b) => a.name.localeCompare(b.name)))
+    const own = medications.filter((med) => med.patient_id === patient.id && (includeInactive || med.active))
+    return json(own.sort((a, b) => a.name.localeCompare(b.name)))
+  }),
+  http.post<{ patientId: string }, MedicationCreate>('/api/v1/patients/:patientId/medications', async ({ params, request }) => {
+    const patient = findPatient(params.patientId)
+    if (patient === undefined) return patientNotFound()
+    const body = await request.json()
+    const errors = medicationProblems(body)
+    if (errors.length > 0) return validationProblem(errors)
+    const created: Medication = {
+      id: crypto.randomUUID(),
+      patient_id: patient.id,
+      name: body.name,
+      dosage_label: body.dosage_label,
+      instructions: body.instructions ?? null,
+      active: true,
+      deactivated_at: null,
+      created_at: now().toISOString(),
+      schedules: [],
+    }
+    medications.push(created)
+    return json(created, 201)
+  }),
+  http.patch<{ medicationId: string }, MedicationUpdate>('/api/v1/medications/:medicationId', async ({ params, request }) => {
+    const existing = medications.find((med) => med.id === params.medicationId)
+    if (existing === undefined) return problem(404, 'NOT_FOUND', 'Medication not found')
+    const body = await request.json()
+    if (body.active === true && !existing.active) return problem(409, 'MEDICATION_INACTIVE', 'Medication is inactive')
+    const errors = medicationProblems(body)
+    if (errors.length > 0) return validationProblem(errors)
+    const stopping = body.active === false && existing.active
+    const updated: Medication = {
+      ...existing,
+      ...(body.name === undefined ? {} : { name: body.name }),
+      ...(body.dosage_label === undefined ? {} : { dosage_label: body.dosage_label }),
+      ...(body.instructions === undefined ? {} : { instructions: body.instructions }),
+      ...(stopping ? { active: false, deactivated_at: now().toISOString() } : {}),
+    }
+    medications = medications.map((med) => (med.id === existing.id ? updated : med))
+    return json(updated)
   }),
   http.post<never, DoseLogCreate>('/api/v1/dose-logs', async ({ request }) => recordMockDose(await request.json())),
   http.delete('/api/v1/dose-logs/:doseLogId', ({ params }) => {

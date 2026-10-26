@@ -73,3 +73,25 @@
   font-weight: var(--font-weight-bold);
   font-variant-numeric: tabular-nums;
 }
+
+.itemAction {
+  justify-self: start;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+  padding-block: var(--space-5);
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* A quiet button's text lines up with the text above it; its padding and border sit outside. */
+.quietAction {
+  justify-self: start;
+  margin-inline-start: calc(-1 * (var(--space-2) + var(--border-input)));
+}

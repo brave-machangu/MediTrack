@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import type { Medication, Schedule } from '../../api/medications'
+import { Button } from '../../components/Button/Button'
 import { copy } from '../../copy'
 import { formatShortDate, localDate } from '../../dates'
 import styles from './medications.module.css'
@@ -10,10 +11,13 @@ type Props = {
   /** The patient's timezone, for `deactivated_at`. */
   timeZone: string | undefined
   currentYear: string | undefined
+  /** Only current medications can be edited. */
+  onEdit?: (() => void) | undefined
+  editRef?: ((element: HTMLElement | null) => void) | undefined
 }
 
 /** One medication and its schedules, in plain words. */
-export function MedicationItem({ medication, timeZone, currentYear }: Props) {
+export function MedicationItem({ medication, timeZone, currentYear, onEdit, editRef }: Props) {
   const headingId = useId()
   const stoppedOn =
     !medication.active && medication.deactivated_at && timeZone !== undefined
@@ -31,6 +35,19 @@ export function MedicationItem({ medication, timeZone, currentYear }: Props) {
         <p>{medication.dosage_label}</p>
         {medication.instructions ? <p>{medication.instructions}</p> : null}
       </div>
+      {onEdit === undefined ? null : (
+        // Quiet, so a list of medications isn't a wall of buttons. The visible label is the same on every
+        // medication; the description says which one.
+        <Button
+          ref={editRef}
+          variant="quiet"
+          aria-describedby={headingId}
+          className={styles.quietAction}
+          onClick={onEdit}
+        >
+          {copy.meds.edit}
+        </Button>
+      )}
       <div className={styles.details}>
         <h3 className={styles.schedulesTitle}>{copy.meds.schedulesTitle}</h3>
         {medication.schedules.length === 0 ? (

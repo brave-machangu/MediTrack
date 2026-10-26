@@ -41,3 +41,26 @@ for (const width of [375, 1280]) {
     expect(overflow).toBe(0)
   })
 }
+
+// Medication form (DESIGN.md §4.6): errors next to fields plus a summary, and the saved confirmation.
+test('medication form with errors at 375 px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  await page.getByRole('button', { name: 'Add a medication' }).click()
+  const form = page.getByRole('form', { name: 'Add a medication' })
+  await form.getByRole('button', { name: 'Save medication' }).click()
+  await expect(form.getByRole('group', { name: 'There is a problem' })).toBeFocused()
+  await form.screenshot({ path: 'screenshots/out/medication-form-errors-375.png' })
+})
+
+test('medication saved at 375 px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  await page.getByRole('button', { name: 'Add a medication' }).click()
+  const form = page.getByRole('form', { name: 'Add a medication' })
+  await form.getByLabel('Name').fill('Demo Med Zeta')
+  await form.getByLabel('Dosage').fill('2 tablets')
+  await form.getByRole('button', { name: 'Save medication' }).click()
+  await expect(page.getByText('Demo Med Zeta added.')).toBeVisible()
+  await page.screenshot({ path: 'screenshots/out/medication-saved-375.png' })
+})

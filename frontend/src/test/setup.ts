@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll } from 'vitest'
-import { resetMockLogs } from '../mocks/handlers'
+import { resetMockData } from '../mocks/handlers'
 import { server } from '../mocks/server'
 
 // The first test in a file pays for imports and MSW start-up (about 2 s here, more on a busy machine).
@@ -19,7 +19,7 @@ beforeAll(() => {
 afterEach(() => {
   cleanup()
   server.resetHandlers()
-  resetMockLogs()
+  resetMockData()
 })
 
 afterAll(() => {

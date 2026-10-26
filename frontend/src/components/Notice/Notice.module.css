@@ -48,3 +48,17 @@
 .info .icon {
   color: var(--color-accent);
 }
+
+/* A 32-character trace ID must wrap on a 320 px screen. */
+.reference {
+  overflow-wrap: anywhere;
+}
+
+.success {
+  border-left-color: var(--color-success);
+  background: var(--color-success-subtle);
+}
+
+.success .icon {
+  color: var(--color-success);
+}
