@@ -5,7 +5,9 @@ description = "MediTrack API: medication reminder and adherence tracker (FastAPI
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.20.1",
     "fastapi>=0.115",
+    "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.4",
     "sqlalchemy>=2.0",
     "tzdata>=2026.5",
@@ -31,6 +33,10 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "TID"]
+
+[tool.ruff.lint.isort]
+# The migrations folder is also called alembic/; the import is the installed package.
+known-third-party = ["alembic"]
 
 # AGENTS.md rule 6: time comes from app/clock.py only.
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
