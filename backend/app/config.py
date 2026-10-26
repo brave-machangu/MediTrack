@@ -20,3 +20,10 @@ class Settings(BaseSettings):
         default="local", alias="MEDITRACK_ENV"
     )
     version: str = Field(default="dev", alias="MEDITRACK_VERSION")
+    # Log window (requirements §4.2): how early and how late a dose can be recorded.
+    early_log_window_minutes: int = Field(
+        default=60, ge=0, alias="MEDITRACK_EARLY_LOG_WINDOW_MINUTES"
+    )
+    late_log_limit_minutes: int = Field(
+        default=1440, ge=0, alias="MEDITRACK_LATE_LOG_LIMIT_MINUTES"
+    )

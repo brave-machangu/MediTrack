@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.clock import Clock
 from app.config import Settings
+from app.domain.types import DoseRules
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +23,7 @@ class AppContext:
     clock: Clock
     engine: Engine
     session_factory: sessionmaker[Session]
+    dose_rules: DoseRules
 
 
 def get_context(request: Request) -> AppContext:
@@ -43,5 +45,10 @@ def get_clock(context: ContextDep) -> Clock:
     return context.clock
 
 
+def get_dose_rules(context: ContextDep) -> DoseRules:
+    return context.dose_rules
+
+
 SessionDep = Annotated[Session, Depends(get_session)]
 ClockDep = Annotated[Clock, Depends(get_clock)]
+DoseRulesDep = Annotated[DoseRules, Depends(get_dose_rules)]

@@ -55,3 +55,18 @@ def test_medication_list_statement_count_is_constant(
     assert len(response.json()) == medications
     # patient, medications, schedules with has_dose_logs (BEGIN/COMMIT aren't cursor executions)
     assert len(statements) == 3, statements
+
+
+@pytest.mark.parametrize("medications", [1, 4])
+def test_day_view_statement_count_is_constant(
+    api: TestClient, engine: Engine, medications: int
+) -> None:
+    patient_id = patient_with_medications(api, engine, medications)
+
+    with count_statements(api) as statements:
+        response = api.get(f"{PATIENTS}/{patient_id}/doses?date=2026-11-02")
+
+    assert response.status_code == 200
+    assert len(response.json()["doses"]) == medications
+    # patient, schedules joined with their medications, dose logs of the planned instants
+    assert len(statements) == 3, statements
