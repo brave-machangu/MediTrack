@@ -30,11 +30,18 @@ export function usePatientToday(patientId: string) {
   return useQuery({ queryKey: todayKey(patientId), queryFn: () => fetchToday(patientId), select: (day) => day.date })
 }
 
-/** Unrecorded doses past their grace period, newest first. No range is sent, so the server covers the last 7 days (AC-22). */
-export function useMissedDoses(patientId: string) {
+/** Patient-local dates, both included. */
+export type DateRange = { from: string; to: string }
+
+/**
+ * Unrecorded doses past their grace period, newest first. Without a range the server covers the patient's
+ * last 7 days (AC-22); a range may cover at most 31 days (AC-23).
+ */
+export function useMissedDoses(patientId: string, range: DateRange | undefined) {
+  const query = range === undefined ? '' : `?${new URLSearchParams(range).toString()}`
   return useQuery({
-    queryKey: [...missedKey(patientId), 'last-7-days'],
-    queryFn: () => request<PlannedDose[]>(`/api/v1/patients/${encodeURIComponent(patientId)}/missed-doses`),
+    queryKey: [...missedKey(patientId), range ?? 'last-7-days'],
+    queryFn: () => request<PlannedDose[]>(`/api/v1/patients/${encodeURIComponent(patientId)}/missed-doses${query}`),
   })
 }
 
