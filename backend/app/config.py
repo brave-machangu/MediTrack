@@ -13,6 +13,6 @@ class Settings(BaseSettings):
 
     database_url: str = Field(default="sqlite:///./meditrack.db", alias="DATABASE_URL")
     environment: Literal["local", "test", "ci", "dev", "production"] = Field(
-        default="local", alias="APP_ENV"
+        default="local", alias="MEDITRACK_ENV"
     )
-    version: str = Field(default="dev", alias="APP_VERSION")
+    version: str = Field(default="dev", alias="MEDITRACK_VERSION")

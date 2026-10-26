@@ -8,7 +8,7 @@ from app.config import Settings
 
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in ("DATABASE_URL", "APP_ENV", "APP_VERSION"):
+    for name in ("DATABASE_URL", "MEDITRACK_ENV", "MEDITRACK_VERSION", "APP_ENV", "APP_VERSION"):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -21,8 +21,8 @@ def test_defaults_work_without_any_environment() -> None:
 
 def test_reads_documented_environment_variables(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://meditrack@db/meditrack")
-    monkeypatch.setenv("APP_ENV", "dev")
-    monkeypatch.setenv("APP_VERSION", "3f2c1a9")
+    monkeypatch.setenv("MEDITRACK_ENV", "dev")
+    monkeypatch.setenv("MEDITRACK_VERSION", "3f2c1a9")
     settings = Settings()
     assert settings.database_url == "postgresql+psycopg://meditrack@db/meditrack"
     assert settings.environment == "dev"
@@ -30,6 +30,15 @@ def test_reads_documented_environment_variables(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_rejects_unknown_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("MEDITRACK_ENV", "staging")
     with pytest.raises(ValidationError):
         Settings()
+
+
+def test_names_without_the_meditrack_prefix_are_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Renamed in Lead decision Q5 (backend/DESIGN.md); a stale variable must not take effect.
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_VERSION", "stale")
+    settings = Settings()
+    assert settings.environment == "local"
+    assert settings.version == "dev"
