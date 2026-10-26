@@ -17,3 +17,20 @@ class PatientHasLogs(DomainError):
 
 class MedicationInactive(DomainError):
     """A deactivated medication can't be reactivated, given schedules or logged (§4.4)."""
+
+
+class ScheduleHasLogs(DomainError):
+    """Once a schedule has dose logs, only its end_date may change, and it can't be deleted."""
+
+
+class ScheduleOverlap(DomainError):
+    """Two schedules of one medication would share a date on a common weekday (§4.4, AC-34)."""
+
+
+class InvalidField(DomainError):
+    """A value breaks a rule that needs stored data, such as end_date before the stored start."""
+
+    def __init__(self, field: str, message: str) -> None:
+        super().__init__(message)
+        self.field = field
+        self.message = message

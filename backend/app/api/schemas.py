@@ -12,8 +12,17 @@ from importlib import resources
 from typing import Annotated, Self
 from uuid import UUID
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
+from app.config import GRACE_PERIOD_DEFAULT_MINUTES, GRACE_PERIOD_MAX_MINUTES
 from app.db.repositories import ScheduleRow
 from app.services.medications import MedicationView
 
@@ -46,6 +55,24 @@ DisplayName = Annotated[str, Field(min_length=1, max_length=80)]
 MedicationName = Annotated[str, Field(min_length=1, max_length=100)]
 DosageLabel = Annotated[str, Field(min_length=1, max_length=100)]
 Instructions = Annotated[str, Field(max_length=500)]
+
+
+def _no_duplicates[T](values: list[T]) -> list[T]:
+    if len(set(values)) != len(values):
+        raise ValueError("must not contain duplicates")
+    return values
+
+
+LocalTime = Annotated[str, StringConstraints(pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$")]
+# Strict: the contract says integer, so "1" or true is rejected rather than converted.
+Weekday = Annotated[int, Field(strict=True, ge=1, le=7)]
+TimesOfDay = Annotated[
+    list[LocalTime], Field(min_length=1, max_length=12), AfterValidator(_no_duplicates)
+]
+DaysOfWeek = Annotated[
+    list[Weekday], Field(min_length=1, max_length=7), AfterValidator(_no_duplicates)
+]
+GraceMinutes = Annotated[int, Field(strict=True, ge=0, le=GRACE_PERIOD_MAX_MINUTES)]
 
 
 class RequestModel(BaseModel):
@@ -98,6 +125,26 @@ class MedicationUpdate(PartialUpdate):
     active: bool | None = None
 
     _not_null = field_validator("name", "dosage_label", "active", mode="before")(_reject_null)
+
+
+class ScheduleCreate(RequestModel):
+    times_of_day: TimesOfDay
+    days_of_week: DaysOfWeek = Field(default_factory=lambda: [1, 2, 3, 4, 5, 6, 7])
+    start_date: date
+    end_date: date | None = None
+    grace_period_minutes: GraceMinutes = GRACE_PERIOD_DEFAULT_MINUTES
+
+
+class ScheduleUpdate(PartialUpdate):
+    times_of_day: TimesOfDay | None = None
+    days_of_week: DaysOfWeek | None = None
+    start_date: date | None = None
+    end_date: date | None = None  # nullable: null removes the end
+    grace_period_minutes: GraceMinutes | None = None
+
+    _not_null = field_validator(
+        "times_of_day", "days_of_week", "start_date", "grace_period_minutes", mode="before"
+    )(_reject_null)
 
 
 class ScheduleOut(BaseModel):

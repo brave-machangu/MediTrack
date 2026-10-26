@@ -8,6 +8,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Fixed by api/openapi.yaml (ScheduleCreate.grace_period_minutes), so not configurable.
+GRACE_PERIOD_DEFAULT_MINUTES = 60
 GRACE_PERIOD_MAX_MINUTES = 240
 
 

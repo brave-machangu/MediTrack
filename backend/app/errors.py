@@ -20,7 +20,15 @@ from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import Match, Route
 
-from app.domain.errors import DomainError, MedicationInactive, NotFound, PatientHasLogs
+from app.domain.errors import (
+    DomainError,
+    InvalidField,
+    MedicationInactive,
+    NotFound,
+    PatientHasLogs,
+    ScheduleHasLogs,
+    ScheduleOverlap,
+)
 
 logger = logging.getLogger("meditrack.errors")
 
@@ -74,6 +82,22 @@ DOMAIN_PROBLEMS: dict[type[DomainError], Problem] = {
         "The timezone can't change after doses have been recorded",
     ),
     MedicationInactive: Problem(409, ErrorCode.MEDICATION_INACTIVE, "Medication is inactive"),
+    ScheduleHasLogs: Problem(
+        409,
+        ErrorCode.SCHEDULE_HAS_LOGS,
+        "The schedule has recorded doses; only its end date can change",
+    ),
+    ScheduleOverlap: Problem(
+        409,
+        ErrorCode.SCHEDULE_OVERLAP,
+        "Schedule overlaps an existing schedule",
+        # The text of the contract's example, which the UI shows next to the form (AC-34).
+        detail=(
+            "This medication already has a schedule on those days. "
+            "End the current schedule first; the new one can start the next day."
+        ),
+    ),
+    InvalidField: Problem(422, ErrorCode.VALIDATION_ERROR, "Request is invalid"),
 }
 
 
@@ -108,7 +132,12 @@ def _field_path(location: Sequence[int | str]) -> str:
 async def _handle_domain_error(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, DomainError)
     problem = DOMAIN_PROBLEMS[type(exc)]
-    return problem_response(problem.status, problem.code, problem.title, detail=problem.detail)
+    errors: list[FieldError] | None = None
+    if isinstance(exc, InvalidField):
+        errors = [{"field": exc.field, "message": exc.message}]
+    return problem_response(
+        problem.status, problem.code, problem.title, detail=problem.detail, errors=errors
+    )
 
 
 async def _handle_validation(_: Request, exc: Exception) -> JSONResponse:
