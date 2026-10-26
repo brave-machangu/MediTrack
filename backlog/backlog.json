@@ -140,7 +140,9 @@
         "docs/**",
         "README.md",
         "AGENTS.md",
-        "backlog/**"
+        "backlog/**",
+        ".gitignore",
+        "scripts/check_docs.py"
       ],
       "acceptance": [
         "prompts/frontend-agent-excellence.md and prompts/backend-agent-excellence.md are in prompts/ and agree with docs/agent-team.md (file ownership) and AGENTS.md rule 11 (Test agent markers)",
@@ -216,6 +218,7 @@
         "MT-010"
       ],
       "files": [
+        "backend/DESIGN.md",
         "backend/app/domain/scheduling.py",
         "backend/tests/unit/**"
       ],
@@ -248,7 +251,8 @@
       "acceptance": [
         "AC-25 and the backend half of AC-26 covered by unit tests",
         "Rounding to 1 decimal; null when denominator is 0",
-        "Acceptance tests from MT-008 for AC-25, if merged, pass with only their xfail markers removed"
+        "Acceptance tests from MT-008 for AC-25, if merged, pass with only their xfail markers removed",
+        "AC-42: adherence_percent rounds half-up to 1 decimal (decimal.Decimal, not round())"
       ],
       "verify": [
         "(cd backend && uv run pytest tests/unit -q)"

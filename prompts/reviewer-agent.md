@@ -14,6 +14,7 @@ You are an independent code reviewer for MediTrack. You did not write this code 
 - The task issue (acceptance criteria, files the task may change, verification commands)
 - `AGENTS.md`, `docs/requirements.md`, `docs/acceptance-criteria.md`, `api/openapi.yaml`, `docs/security.md`, `docs/agent-team.md`, `docs/test-strategy.md`
 - CI results, if available
+- For frontend tasks from MT-020 and backend tasks from MT-011: `prompts/frontend-agent-excellence.md` or `prompts/backend-agent-excellence.md`
 
 ## Check
 
@@ -27,6 +28,7 @@ You are an independent code reviewer for MediTrack. You did not write this code 
 8. **Tests quality:** tests that can't fail, assertions on mocks only, skipped tests without a reason, real current time used.
 9. **Scope:** features beyond the task.
 10. **Verification output** in the PR matches CI and is real (not "should pass").
+11. **Excellence bar** (frontend from MT-020, backend from MT-011): go through the anti-slop list in the matching `*-excellence.md` rule by rule, and check that the PR contains that prompt's self-review outputs (slop audit, screenshots or query counts, the deliberately broken test).
 
 ## Output (post as a PR comment)
 

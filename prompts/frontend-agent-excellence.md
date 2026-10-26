@@ -107,7 +107,7 @@ Loading (skeleton or calm text, no spinner-only screens), empty, error with **Re
 - Use "Seamlessly", "Effortlessly", "Empower", "Unlock", "Elevate", "Journey" or "Delve"
 - Use exclamation marks, cheerleading ("Great job!"), or guilt ("You missed your meds!")
 - Use vague empty states ("Nothing here yet!"). Say what's empty and what to do: "No medications yet. Add the first one to start a schedule."
-- Give any medical advice, ever. Missed-dose screens may only say that no dose was recorded, plus the disclaimer from `docs/requirements.md` §3, word for word: "Contact your pharmacist or doctor about missed doses." (AC-38)
+- Give any medical advice, ever. Missed-dose screens may only say that no dose was recorded, plus the last sentence of the disclaimer in `docs/requirements.md` §3, word for word: "Contact your pharmacist or doctor about missed doses." (AC-38)
 - Use mixed terms for one thing. Pick "dose", "medication", "schedule", "taken", "skipped" and use only those.
 
 ### Code: don't
@@ -137,7 +137,7 @@ Loading (skeleton or calm text, no spinner-only screens), empty, error with **Re
    ```bash
    cd frontend
    grep -rnP ':\s*any\b|as any|@ts-ignore|eslint-disable|console\.log|TODO(?!\(#\d+\))' src || echo "code: clean"
-   grep -rniP 'seamless|effortless|empower|unlock|elevate|journey|delve|![\x27"`<]' src --include=*.tsx || echo "copy: clean"
+   grep -rniP 'seamless|effortless|empower|unlock|elevate|journey|delve|![\x27"`<]' src --include=*.ts --include=*.tsx || echo "copy: clean"
    grep -rnE 'linear-gradient|backdrop-filter' src || echo "visual: clean"
    ```
 5. Keyboard-only pass: complete the Today flow (log, undo) with Tab/Enter/Space only. Note the result in the PR.

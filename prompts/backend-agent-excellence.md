@@ -29,10 +29,10 @@ Several agents work on this repo at the same time. You stay out of their way lik
 
 | Agent | What they own | Your rule |
 |---|---|---|
-| Lead / Spec agent | `api/openapi.yaml`, `docs/**`, `backlog/**`, root files | Never edit. Contract change needed → open a `contract-change` issue, note it in the PR, work on something else |
+| Lead / Spec agent | `api/openapi.yaml`, `docs/**`, `prompts/**`, `backlog/**`, the spec scripts in `scripts/`, root files | Never edit. Contract change needed → open a `contract-change` issue, note it in the PR, work on something else |
 | Frontend agent | `frontend/**` | Never edit. It depends on you matching the contract **exactly**: no extra fields, no undocumented endpoints, no changed status codes |
 | Test agent (listed in `agent-team.md`) | `backend/tests/acceptance/**`: acceptance tests written before you implement (MT-008) | **Never edit, weaken, skip or delete its tests.** Make them pass by fixing your code. The one exception (AGENTS.md rule 11): when your code makes a strict-xfail test pass, remove only its `xfail` marker, because otherwise the unexpected pass fails CI. If you believe a test is wrong, comment on the issue with the reason and let the Lead decide |
-| Platform agent | `docker-compose*.yml`, `Makefile`, `.github/workflows/**`, `deploy/**`, `probe/**`, `responder/**` | Never edit. You give it a stable interface (below) and document it |
+| Platform agent | `docker-compose*.yml`, `Makefile`, `.github/workflows/**`, `deploy/**`, `probe/**`, `responder/**`, `scripts/**` (except the spec scripts) | Never edit. You give it a stable interface (below) and document it |
 | Reviewer agent | Nothing (comments only) | Answer its findings in the PR; don't argue in code comments |
 
 **Your interface to the Platform and Frontend agents** must stay stable and documented in `backend/README.md`:
@@ -40,8 +40,8 @@ Several agents work on this repo at the same time. You stay out of their way lik
 - How to run: `uv run uvicorn …` on port **8000** (the frontend dev proxy expects `localhost:8000`)
 - Migrations: one command (`uv run alembic upgrade head`), separate from app start
 - Seed: `uv run python -m app.seed` (idempotent; includes the Probe Patient used by the alert probe). `--reset` replaces all data with the seed in one transaction (decision D1, AC-41); deploys and the nightly reset use it.
-- Every environment variable: name, meaning, default, example. Use one prefix; the database URL may follow the conventional name if you document it. No secret has a default value. The names in use since MT-010 are `DATABASE_URL` (conventional), `APP_ENV` and `APP_VERSION` (prefix `APP_`); keep that prefix for new variables.
-- Health: `/healthz` returns the build version from a `GIT_SHA` build arg (the Dockerfile passes it into `APP_VERSION`); `/readyz` checks the database
+- Every environment variable: name, meaning, default, example. Use one prefix; the database URL may follow the conventional name if you document it. No secret has a default value. The names MT-010 uses (PR #40) are `DATABASE_URL` (conventional), `APP_ENV` and `APP_VERSION` (prefix `APP_`); keep that prefix for new variables.
+- Health: `/healthz` returns the build version from a `GIT_SHA` build arg (MT-021's Dockerfile passes it into `APP_VERSION`); `/readyz` checks the database
 - Build args: `GIT_SHA`, `FAULT_DOSE_LOG_ERROR_RATE` (MT-023)
 
 Change any of these only with a note in the PR titled **"Interface change"**, so the Lead can tell the other agents.
@@ -136,9 +136,9 @@ Order: MT-010 → MT-011 → MT-012 → MT-013 → MT-014 → MT-015 → MT-016 
    uv run ruff check .
    uv run ruff format --check .
    uv run mypy --strict app
-   uv run pytest -q --cov=app/domain --cov=app/services --cov-report=term-missing
+   uv run pytest -q --cov=app/domain --cov=app/services --cov-branch --cov-report=term-missing
    ```
-   Coverage for `app/domain` and `app/services` ≥ 85%. Explain any gap rather than padding it with empty tests.
+   Line coverage for `app/domain` and `app/services` ≥ 85%, and branch coverage for `app/domain` ≥ 95% (test-strategy.md §4). Explain any gap rather than padding it with empty tests.
 2. **PostgreSQL run**: run integration tests against a throwaway local PostgreSQL (for example `docker run --rm -d -p 5433:5432 -e POSTGRES_PASSWORD=test postgres:16`). Paste the summary, showing AC-18 ran and wasn't skipped. Don't add this container to any Compose file; that's the Platform agent's.
 3. **Prove a test can fail**: for each risky rule in the task, break it on purpose (e.g. `>` → `>=` on the grace boundary), show the test failing, then revert. Paste both outputs.
 4. **Manual flow**: start the server and run the main journey with `curl` or `httpie`: create patient → medication → schedule → day view → log dose → duplicate (409) → undo → adherence. Paste requests and responses.

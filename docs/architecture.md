@@ -105,7 +105,7 @@ frontend/
 
 ## 6. Deployment options
 
-**Decision D2 (2026-10-26): option A**, one small Linux VM running Docker Compose, with option B as the fallback. The provider is chosen in MT-033 from the price check in §6.1. Prices and free tiers change often, so re-check the provider's pricing page on the day you buy.
+**Decision D2 (2026-10-26): option A**, one small Linux VM running Docker Compose, with option B as the fallback. Provider: **AWS Lightsail 4 GB** (US$24/month), chosen from the price check in §6.1; MT-033 creates it. Prices and free tiers change often, so re-check the provider's pricing page on the day you buy.
 
 | Option | How | Pros | Cons |
 |---|---|---|---|
@@ -140,7 +140,7 @@ Fallback B pieces: Render free web services sleep after 15 minutes and free Post
 - **Lightsail billing:** hourly up to the monthly price. Instances are billed **while stopped**, so delete one to stop paying. A static IP is free while attached and $0.005/hour if left unattached for more than an hour. Snapshots cost $0.05/GB-month.
 - **What US$100 buys:** about 4 months of the 4 GB bundle on its own (US$24/month); snapshots and extra transfer come out of the same credit.
 
-**Billing alarm, before you create the instance:** in Billing and Cost Management, create a monthly **cost budget of US$30** with **credits excluded** (so it tracks real usage while credits pay for it), with email alerts at 50%, 80% and 100% of actual cost and 100% of forecasted cost. Also turn on the Free Tier and credit-balance email alerts. On the Paid plan, also set its monthly spend limit; AWS's FAQ describes one starting at US$20, with notifications at 50%, 75% and 90%. Put a calendar reminder at month 3 to either upgrade or tear the VM down.
+**Billing alarm, before you create the instance:** in Billing and Cost Management, create a monthly **cost budget of US$30** that tracks **unblended** cost (usage before credits, not "net unblended"), with email alerts at 100% of actual cost and 100% of forecasted cost. Expected usage is about US$24/month, so lower thresholds (50%, 80%) would fire every month by design. On the Free plan, AWS also emails you about the credit balance and the plan's end automatically. **If you move to the Paid plan, don't set its spend limit at the US$20 minimum.** AWS's FAQ says that when a project reaches its spend limit, AWS "will pause your project and stop its resources" until the next month, which would take dev and prod down mid-month and fire the user-impact alert. Set it to at least US$40, or leave it unset and rely on the budget. AWS doesn't say whether the limit counts usage before or after credits. Put a calendar reminder at month 3 to either upgrade or tear the VM down.
 
 **Next step (Lead, MT-033):** create the AWS account, set the billing alarm, then create the Lightsail 4 GB instance in the region closest to you and your reviewers. No account or credential has been created by an agent.
 

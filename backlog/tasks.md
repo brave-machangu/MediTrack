@@ -152,7 +152,7 @@ python3 scripts/check_ownership.py --role backend --files backend/app/main.py
 
 - **Owner:** Lead  ·  **Priority:** P1  ·  **Phase:** 0-spec
 - **Depends on:** MT-001
-- **Files:** `prompts/**`, `docs/**`, `README.md`, `AGENTS.md`, `backlog/**`
+- **Files:** `prompts/**`, `docs/**`, `README.md`, `AGENTS.md`, `backlog/**`, `.gitignore`, `scripts/check_docs.py`
 
 **Acceptance criteria**
 
@@ -218,7 +218,7 @@ python3 scripts/render_backlog.py --check
 
 - **Owner:** Backend agent  ·  **Priority:** P0  ·  **Phase:** 1-build
 - **Depends on:** MT-010
-- **Files:** `backend/app/domain/scheduling.py`, `backend/tests/unit/**`
+- **Files:** `backend/DESIGN.md`, `backend/app/domain/scheduling.py`, `backend/tests/unit/**`
 
 **Acceptance criteria**
 
@@ -246,6 +246,7 @@ test -d backend/app/domain && ! grep -rnE 'datetime\.now|utcnow|date\.today|^(fr
 - [ ] AC-25 and the backend half of AC-26 covered by unit tests
 - [ ] Rounding to 1 decimal; null when denominator is 0
 - [ ] Acceptance tests from MT-008 for AC-25, if merged, pass with only their xfail markers removed
+- [ ] AC-42: adherence_percent rounds half-up to 1 decimal (decimal.Decimal, not round())
 
 **Verification**
 
