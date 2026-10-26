@@ -76,7 +76,7 @@ export function SummaryPage() {
   )
 }
 
-/** A 422 for the date: the server's message for `date` (assumed, as for the missed-doses range), or the general one. */
+/** A 422 for the date: the server's message for `date` (the backend names it after the parameter), or the general one. */
 function refusal(error: unknown): string | null {
   if (!(error instanceof ApiError) || error.code !== 'VALIDATION_ERROR') return null
   return error.fieldErrors.find((fieldError) => fieldError.field === 'date')?.message ?? copy.error.VALIDATION_ERROR
