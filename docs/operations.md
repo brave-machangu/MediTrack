@@ -178,10 +178,10 @@ This is an estimate from a token model, not a measurement. MT-053 records the re
 | Model (pin) | Price per 1M tokens: input / output / 5-min cache write / cache read | Typical run | Worst case (25 turns) |
 |---|---|---|---|
 | Claude Opus 5.5 (`claude-opus-5-5`, upgrade if investigations are weak) | $4 / $20 / $5 / $0.20 | ≈ $1.55 | ≈ $3.00 |
-| **Claude Sonnet 5.5** (`claude-sonnet-5-5`, **pinned, decision D4**) | $2 / $10 / $2.50 / $0.20 | ≈ $0.90 | ≈ $1.80 |
+| **Claude Sonnet 5.5** (`claude-sonnet-5-5`, **pinned, decision D4**) | $2 / $10 / $2.50 / $0.10 | ≈ $0.78 | ≈ $1.51 |
 | Claude Fable 5.1 (`claude-fable-5-1`, not recommended here) | $10 / $50 / $12.50 / $0.25 | ≈ $3.60 | ≈ $6.80 |
 
-Report-only runs edit nothing and usually land at the lower end. **Spend limit: $20/month (decision D4).** With Sonnet 5.5 that covers about 11 worst-case or 22 typical runs. With alert deduplication, expect 4–6 runs a month: drills plus the occasional real alert. If the drill shows Sonnet's investigations are weak, the Lead switches the pin to Opus 5.5 by PR; at $20 that still covers about 6 worst-case runs. Prices are Anthropic first-party API rates as of 2026-10; check the pricing page before creating the key.
+Report-only runs edit nothing and usually land at the lower end. **Spend limit: $20/month (decision D4).** With Sonnet 5.5 that covers about 13 worst-case or 25 typical runs. With alert deduplication, expect 4–6 runs a month: drills plus the occasional real alert. If the drill shows Sonnet's investigations are weak, the Lead switches the pin to Opus 5.5 by PR; at $20 that still covers about 6 worst-case runs. Prices are Anthropic first-party API rates from the [pricing page](https://platform.claude.com/docs/en/about-claude/pricing), checked 2026-10-26. Cache reads cost 0.05× input on Opus 5.5 and Sonnet 5.5, and 0.025× on Fable 5.1. Check the page again before creating the key.
 
 ## 7. Incident drill
 

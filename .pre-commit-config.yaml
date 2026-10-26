@@ -1,5 +1,6 @@
 # Local guardrails. Install once per clone:
-#   uvx pre-commit@4.6.2 install          (or: pipx run pre-commit install)
+#   uv tool install pre-commit==4.6.2 && pre-commit install   (a persistent install;
+#   a hook installed through uvx points at uv's cache and breaks if it's cleaned)
 # Run everything by hand:
 #   uvx pre-commit@4.6.2 run --all-files
 # CI runs the same hooks (MT-031). Language linters (ruff, eslint) are added by the
@@ -30,12 +31,12 @@ repos:
       - id: backlog-rendered
         name: backlog/tasks.md matches backlog/backlog.json
         entry: python scripts/render_backlog.py --check
-        language: system
+        language: python
         files: ^(backlog/|scripts/render_backlog\.py$)
         pass_filenames: false
       - id: docs-check
         name: docs links, anchors and ID references
         entry: python scripts/check_docs.py
-        language: system
+        language: python
         files: \.(md|json|ya?ml)$
         pass_filenames: false

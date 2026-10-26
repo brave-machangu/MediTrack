@@ -53,21 +53,21 @@ A task is ready when it has: an owner role, the files it may touch, acceptance c
 
 ## 6. CI checks (target state)
 
-MT-031 creates the workflow with the checks that exist at that point; each later task adds its job (contract test with MT-018, image builds with MT-021/MT-029, Compose smoke with MT-030).
+MT-031 creates the workflow (`.github/workflows/ci.yml`) with the checks that exist at that point; each later task adds its job (contract test with MT-018, image builds with MT-021/MT-029, Compose smoke with MT-030). Every job runs on every PR, so each required check reports a status on every PR. A path filter would leave a required check waiting for a job that never ran.
 
 | Check | Runs on | Blocks merge |
 |---|---|---|
 | OpenAPI lint | every PR | ✓ |
-| Backend: ruff, mypy, pytest unit (SQLite) | PRs touching `backend/` or `api/` | ✓ |
-| Backend: integration + contract tests (PostgreSQL service) | PRs touching `backend/` or `api/` | ✓ |
-| Frontend: eslint, tsc, vitest | PRs touching `frontend/` or `api/` | ✓ |
-| Generated types up to date (`make gen-api` produces no diff) | PRs touching `frontend/` or `api/` | ✓ |
+| Backend: ruff, mypy, pytest unit (SQLite) | every PR | ✓ |
+| Backend: integration + contract tests (PostgreSQL service) | every PR | ✓ |
+| Frontend: eslint, tsc, vitest | every PR | ✓ |
+| Generated types up to date (`npm run gen:api` produces no diff; `make gen-api` once MT-030 adds the Makefile) | every PR | ✓ |
 | Docker images build | every PR | ✓ |
 | Compose smoke test (`/readyz`, create + log a dose) | every PR | ✓ |
-| Backend tests under a second process timezone (`TZ=America/Los_Angeles`) | PRs touching `backend/` | ✓ |
+| Backend tests under a second process timezone (`TZ=America/Los_Angeles`) | every PR | ✓ |
 | Secrets and dependencies: gitleaks, `pip-audit`, `npm audit --audit-level=high` | every PR | ✓ |
-| Migration safety: `scripts/check_migrations.py` (destructive change needs `contract-migration` label) | PRs touching `backend/alembic/` | ✓ |
-| Backlog page up to date: `scripts/render_backlog.py --check` | PRs touching `backlog/` | ✓ |
+| Migration safety: `scripts/check_migrations.py` (destructive change needs `contract-migration` label) | every PR | ✓ |
+| Backlog page up to date: `scripts/render_backlog.py --check` | every PR | ✓ |
 
 CD: merge to `main` → build images tagged with the Git SHA → deploy to **dev** → smoke test. Production deploy is a manual `workflow_dispatch` that needs approval on the `production` environment. Details in [operations.md](operations.md#5-deployment-and-rollback).
 
