@@ -1,12 +1,18 @@
+import { Plus } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTodayDoses } from '../../api/doses'
 import { useMedications } from '../../api/medications'
 import { usePatient, usePatientId } from '../../api/patients'
+import { Button } from '../../components/Button/Button'
+import { Notice } from '../../components/Notice/Notice'
 import { PageHeading } from '../../components/PageHeading/PageHeading'
 import { EmptyState, ErrorState, LoadingState } from '../../components/PageState/PageState'
 import { copy } from '../../copy'
-import { MedicationItem } from './MedicationItem'
+import { DeleteScheduleDialog, StopMedicationDialog } from './MedicationDialogs'
+import { MedicationForm } from './MedicationForm'
+import { MedicationList } from './MedicationList'
 import styles from './medications.module.css'
+import { useOpenForm } from './useOpenForm'
 
 export function MedicationsPage() {
   const patientId = usePatientId()
@@ -14,6 +20,8 @@ export function MedicationsPage() {
   const medications = useMedications(patientId)
   // The patient's today, from the server: dates show a year only when it isn't this one (DD-6, DD-7).
   const today = useTodayDoses(patientId).data
+  // Destructured: the hook hands out ref callbacks, and the React lint treats a whole object passed that way as a ref.
+  const { open, saved, focusSaved, focusIf, openForm, cancel, onSaved } = useOpenForm()
   const [showStopped, setShowStopped] = useState(false)
 
   let content: ReactNode
@@ -28,14 +36,38 @@ export function MedicationsPage() {
     ) : (
       <LoadingState label={copy.meds.loading} />
     )
-  } else if (medications.data.length === 0) {
-    content = <EmptyState title={copy.meds.empty.title} body={copy.meds.empty.body} />
   } else {
-    const hasStopped = medications.data.some((medication) => !medication.active)
-    const shown = medications.data.filter((medication) => showStopped || medication.active)
+    const all = medications.data
+    const stopping = open?.kind === 'stop' ? all.find((medication) => medication.id === open.id) : undefined
+    const deleting =
+      open?.kind === 'delete-schedule'
+        ? all.flatMap((medication) => medication.schedules).find((schedule) => schedule.id === open.id)
+        : undefined
     content = (
       <>
-        {hasStopped ? (
+        {saved === null ? null : (
+          <div key={saved.count} ref={focusSaved} tabIndex={-1}>
+            <Notice tone="success">
+              <p>{saved.message}</p>
+            </Notice>
+          </div>
+        )}
+        {open?.kind === 'add' ? (
+          <MedicationForm patientId={patientId} onSaved={onSaved} onCancel={cancel('add')} />
+        ) : (
+          <Button
+            ref={focusIf('add')}
+            className={styles.itemAction}
+            onClick={() => {
+              openForm({ kind: 'add' })
+            }}
+          >
+            <Plus aria-hidden="true" />
+            {copy.meds.add}
+          </Button>
+        )}
+        {all.length === 0 && open === null ? <EmptyState title={copy.meds.empty.title} body={copy.meds.empty.body} /> : null}
+        {all.some((medication) => !medication.active) ? (
           <label className={styles.toggle}>
             <input
               type="checkbox"
@@ -47,18 +79,34 @@ export function MedicationsPage() {
             {copy.meds.showStopped}
           </label>
         ) : null}
-        {/* role="list" because Safari drops list semantics when list-style is none. */}
-        <ul role="list" className={styles.list}>
-          {shown.map((medication) => (
-            <li key={medication.id}>
-              <MedicationItem
-                medication={medication}
-                timeZone={today?.timezone ?? patient.data?.timezone}
-                currentYear={today?.date.slice(0, 4)}
-              />
-            </li>
-          ))}
-        </ul>
+        <MedicationList
+          medications={all.filter((medication) => showStopped || medication.active)}
+          patientId={patientId}
+          open={open}
+          focusIf={focusIf}
+          cancel={cancel}
+          onSaved={onSaved}
+          openForm={openForm}
+          timeZone={today?.timezone ?? patient.data?.timezone}
+          today={today?.date}
+        />
+        {stopping === undefined ? null : (
+          <StopMedicationDialog
+            patientId={patientId}
+            medication={stopping}
+            onDone={onSaved}
+            onCancel={cancel(`stop-${stopping.id}`)}
+          />
+        )}
+        {deleting === undefined ? null : (
+          <DeleteScheduleDialog
+            patientId={patientId}
+            schedule={deleting}
+            currentYear={today?.date.slice(0, 4)}
+            onDone={onSaved}
+            onCancel={cancel(`delete-schedule-${deleting.id}`)}
+          />
+        )}
       </>
     )
   }

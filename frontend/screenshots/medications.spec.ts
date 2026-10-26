@@ -41,3 +41,78 @@ for (const width of [375, 1280]) {
     expect(overflow).toBe(0)
   })
 }
+
+// Medication form (DESIGN.md §4.6): errors next to fields plus a summary, and the saved confirmation.
+test('medication form with errors at 375 px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  await page.getByRole('button', { name: 'Add a medication' }).click()
+  const form = page.getByRole('form', { name: 'Add a medication' })
+  await form.getByRole('button', { name: 'Save medication' }).click()
+  await expect(form.getByRole('group', { name: 'There is a problem' })).toBeFocused()
+  await form.screenshot({ path: 'screenshots/out/medication-form-errors-375.png' })
+})
+
+test('medication saved at 375 px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  await page.getByRole('button', { name: 'Add a medication' }).click()
+  const form = page.getByRole('form', { name: 'Add a medication' })
+  await form.getByLabel('Name').fill('Demo Med Zeta')
+  await form.getByLabel('Dosage').fill('2 tablets')
+  await form.getByRole('button', { name: 'Save medication' }).click()
+  await expect(page.getByText('Demo Med Zeta added.')).toBeVisible()
+  await page.screenshot({ path: 'screenshots/out/medication-saved-375.png' })
+})
+
+// The confirm dialog in a real browser: the native <dialog> traps focus, Esc cancels, focus returns.
+test('stop medication dialog at 375 px, and Esc cancels it', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  const stop = page.getByRole('button', { name: 'Stop medication', exact: true }).first()
+  await stop.click()
+  const dialog = page.getByRole('dialog', { name: 'Stop Demo Med Alpha?' })
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await page.screenshot({ path: 'screenshots/out/stop-dialog-375.png' })
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(stop).toBeFocused()
+})
+
+// Schedule form (DESIGN.md §6.6): field errors, and the overlap message next to the form (AC-34).
+const delta = 'Demo Med Delta Extended Release Capsules'
+
+test('schedule form with errors at 375 px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  await page.getByRole('article', { name: delta }).getByRole('button', { name: 'Add a schedule' }).click()
+  const form = page.getByRole('form', { name: `Add a schedule for ${delta}` })
+  await form.getByLabel('Minutes before a dose counts as missed').fill('300')
+  await form.getByRole('button', { name: 'Save schedule' }).click()
+  await expect(form.getByRole('group', { name: 'There is a problem' })).toBeFocused()
+  await form.screenshot({ path: 'screenshots/out/schedule-form-errors-375.png' })
+})
+
+test('schedule overlap at 375 px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  await page.getByRole('article', { name: delta }).getByRole('button', { name: 'Add a schedule' }).click()
+  const form = page.getByRole('form', { name: `Add a schedule for ${delta}` })
+  await form.getByLabel('Time 1').fill('09:00')
+  await form.getByLabel('Start date').fill('2026-10-28')
+  await form.getByRole('button', { name: 'Save schedule' }).click()
+  await expect(form.getByRole('alert')).toContainText('already has a schedule on those days')
+  await form.screenshot({ path: 'screenshots/out/schedule-overlap-375.png' })
+})
+
+// Schedules with records (requirements §4.4): Change schedule and Change end date.
+for (const [name, label] of [['change-schedule', 'Change schedule'], ['end-date', 'Change end date']] as const) {
+  test(`${name} form at 375 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 900 })
+    await page.goto(pageA)
+    await page.getByRole('article', { name: 'Demo Med Alpha' }).getByRole('button', { name: label }).click()
+    const form = page.getByRole('form', { name: label })
+    await expect(form.getByRole('heading', { name: label })).toBeFocused()
+    await form.screenshot({ path: `screenshots/out/${name}-375.png` })
+  })
+}

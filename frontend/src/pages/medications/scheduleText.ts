@@ -38,3 +38,15 @@ export function datesText(schedule: Schedule, currentYear: string | undefined): 
     ? copy.schedule.fromTo(start, formatShortDate(schedule.end_date, currentYear))
     : copy.schedule.from(start)
 }
+
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1)
+
+/** The schedule in one line for a sentence: "08:30, every day, from 26 October, no end date". Day names keep capitals. */
+export function scheduleSentence(schedule: Schedule, currentYear: string | undefined): string {
+  const days = daysText(schedule.days_of_week)
+  return [
+    timesText(schedule.times_of_day),
+    days === copy.schedule.everyDay ? lowerFirst(days) : days,
+    lowerFirst(datesText(schedule, currentYear)),
+  ].join(', ')
+}

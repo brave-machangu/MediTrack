@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatShortDate, formatTime, localDate, timeZoneLabel } from './dates'
+import { addDays, formatDate, formatShortDate, formatTime, localDate, timeZoneLabel } from './dates'
 
 describe('dates', () => {
   it('formats a calendar date the same whatever the machine timezone', () => {
@@ -23,6 +23,12 @@ describe('dates', () => {
   it('finds the patient-local date of an instant', () => {
     expect(localDate('2026-10-12T23:30:00Z', 'Africa/Harare')).toBe('2026-10-13')
     expect(localDate('2026-10-12T23:30:00Z', 'America/New_York')).toBe('2026-10-12')
+  })
+
+  it('adds days to a calendar date across month ends and DST changes', () => {
+    expect(addDays('2026-10-26', 1)).toBe('2026-10-27')
+    expect(addDays('2026-10-31', 1)).toBe('2026-11-01')
+    expect(addDays('2027-03-27', 1)).toBe('2027-03-28')
   })
 
   it('shows timezone names with spaces', () => {

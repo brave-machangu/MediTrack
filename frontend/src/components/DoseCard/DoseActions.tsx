@@ -3,9 +3,9 @@ import { isLogWindowOpen, type PlannedDose } from '../../api/doses'
 import { copy } from '../../copy'
 import { formatTime } from '../../dates'
 import { Button } from '../Button/Button'
+import { ApiErrorNotice } from '../Notice/ApiErrorNotice'
 import { Notice } from '../Notice/Notice'
 import styles from './DoseCard.module.css'
-import { DoseFailure } from './DoseFailure'
 import { isDuplicate, isRetryable, useDoseActions } from './useDoseActions'
 
 type Props = {
@@ -53,7 +53,7 @@ export function DoseActions({ dose, patientId, timeZone, at, focusHeading }: Pro
         </div>
         {/* DD-2: undoing now would leave a missed dose that could never be recorded again. */}
         {windowOpen ? null : <p className={styles.note}>{copy.dose.undoClosed}</p>}
-        {undo.isError ? <DoseFailure error={undo.error} focusRef={focusIf('error')} /> : null}
+        {undo.isError ? <ApiErrorNotice error={undo.error} focusRef={focusIf('error')} /> : null}
       </>
     )
   } else if (alreadyRecorded !== null) {
@@ -62,7 +62,7 @@ export function DoseActions({ dose, patientId, timeZone, at, focusHeading }: Pro
   } else if (record.isError && isRetryable(record.error)) {
     body = (
       <>
-        <DoseFailure error={record.error} focusRef={focusIf('error')} prefix={copy.dose.notRecorded} />
+        <ApiErrorNotice error={record.error} focusRef={focusIf('error')} prefix={copy.dose.notRecorded} />
         <div key="retry" className={styles.buttons}>
           <Button variant="primary" className={styles.doseButton} onClick={actions.retry}>
             {copy.action.retry}
@@ -78,7 +78,7 @@ export function DoseActions({ dose, patientId, timeZone, at, focusHeading }: Pro
     const saving = record.isPending ? record.variables.status : undefined
     body = (
       <>
-        {record.isError ? <DoseFailure error={record.error} focusRef={focusIf('error')} /> : null}
+        {record.isError ? <ApiErrorNotice error={record.error} focusRef={focusIf('error')} /> : null}
         <div key="record" className={styles.buttons}>
           <Button
             ref={focusIf('taken')}

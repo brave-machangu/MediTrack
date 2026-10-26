@@ -1,12 +1,13 @@
 import type { ComponentProps } from 'react'
 import styles from './Button.module.css'
 
-type Variant = 'primary' | 'secondary' | 'quiet'
+type Variant = 'primary' | 'secondary' | 'quiet' | 'danger'
 
 const variants: Record<Variant, string | undefined> = {
   primary: styles.primary,
   secondary: styles.secondary,
   quiet: styles.quiet,
+  danger: styles.danger,
 }
 
 /** Button styling, also used for links that act as the page's main way forward. */

@@ -62,6 +62,16 @@
   text-decoration-thickness: 2px;
 }
 
+.danger {
+  background: var(--color-danger);
+  color: var(--color-bg);
+}
+
+.danger:hover {
+  background: var(--color-danger-strong);
+  color: var(--color-bg);
+}
+
 /* Busy (e.g. "Saving…") keeps full contrast so the label stays readable. */
 .button:disabled {
   cursor: progress;
