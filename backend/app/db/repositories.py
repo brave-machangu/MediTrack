@@ -8,10 +8,12 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import exists, or_, select
+import psycopg
+from sqlalchemy import UniqueConstraint, exists, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import DoseLog, Medication, Schedule
+from app.db.models import DoseLog, Medication, Patient, Schedule
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,3 +81,33 @@ def dose_logs_between(
         DoseLog.scheduled_for <= last,
     )
     return list(session.scalars(query))
+
+
+def schedule_with_patient(
+    session: Session, schedule_id: UUID
+) -> tuple[Schedule, Medication, Patient] | None:
+    """The schedule with its medication and patient, in one statement."""
+    query = (
+        select(Schedule, Medication, Patient)
+        .join(Medication, Schedule.medication_id == Medication.id)
+        .join(Patient, Medication.patient_id == Patient.id)
+        .where(Schedule.id == schedule_id)
+    )
+    row = session.execute(query).one_or_none()
+    return None if row is None else (row[0], row[1], row[2])
+
+
+def violates_unique(error: IntegrityError, table_name: str, constraint_name: str) -> bool:
+    """Whether `error` broke this unique constraint, on PostgreSQL or SQLite."""
+    original = error.orig
+    if isinstance(original, psycopg.errors.UniqueViolation):
+        return original.diag.constraint_name == constraint_name
+    # SQLite names the columns instead: "UNIQUE constraint failed: dose_logs.a, dose_logs.b".
+    table = Schedule.metadata.tables[table_name]
+    constraint = next(
+        c
+        for c in table.constraints
+        if isinstance(c, UniqueConstraint) and c.name == constraint_name
+    )
+    columns = ", ".join(f"{table_name}.{column.name}" for column in constraint.columns)
+    return str(original) == f"UNIQUE constraint failed: {columns}"

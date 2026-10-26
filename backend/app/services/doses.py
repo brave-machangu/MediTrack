@@ -1,19 +1,28 @@
-"""Planned-dose use cases (FR-04, requirements §4.2–§4.3). Each function is one transaction."""
+"""Planned doses and dose logs (FR-04 to FR-07, requirements §4.2–§4.3).
+
+Each function is one transaction.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.clock import Clock
-from app.db.models import DoseLog, Medication, Patient, Schedule
-from app.db.repositories import dose_logs_between, schedules_of_patient
-from app.domain.errors import NotFound
-from app.domain.scheduling import local_today, planned_doses
+from app.db.models import DOSE_LOG_UNIQUE_NAME, DoseLog, Medication, Patient, Schedule
+from app.db.repositories import (
+    dose_logs_between,
+    schedule_with_patient,
+    schedules_of_patient,
+    violates_unique,
+)
+from app.domain.errors import DuplicateDoseLog, NotFound
+from app.domain.scheduling import check_can_log, is_late, local_today, planned_doses
 from app.domain.types import DoseRules, LoggedDose, LogStatus, PlannedDose, ScheduleRule
 
 ONE_DAY = timedelta(days=1)
@@ -70,6 +79,55 @@ def day_view(
         )
     )
     return DayView(patient, day, now, views)
+
+
+def create_dose_log(
+    session: Session,
+    clock: Clock,
+    rules: DoseRules,
+    *,
+    schedule_id: UUID,
+    scheduled_for: datetime,
+    status: LogStatus,
+    note: str | None,
+) -> DoseLog:
+    """Record a planned dose as taken or skipped (FR-05)."""
+    now = clock.now()
+    scheduled_for = scheduled_for.astimezone(UTC)
+    with session.begin():
+        found = schedule_with_patient(session, schedule_id)
+        if found is None:
+            raise NotFound
+        schedule, medication, patient = found
+        rule = schedule_rule(schedule, medication)
+        check_can_log(rule, scheduled_for, ZoneInfo(patient.timezone), now, rules)
+        log = DoseLog(
+            schedule_id=schedule_id,
+            scheduled_for=scheduled_for,
+            status=status.value,
+            recorded_at=now,
+            late=is_late(scheduled_for, rule.grace, now),
+            note=note,
+        )
+        session.add(log)
+        # No "is it already logged?" read first: the unique constraint decides, so two
+        # requests racing for the same dose can't both win (ADR-003, AC-18).
+        try:
+            session.flush()
+        except IntegrityError as error:
+            if violates_unique(error, DoseLog.__tablename__, DOSE_LOG_UNIQUE_NAME):
+                raise DuplicateDoseLog from error
+            raise
+    return log
+
+
+def delete_dose_log(session: Session, dose_log_id: UUID) -> None:
+    """Undo a record (FR-07); the dose goes back to its time-based status."""
+    with session.begin():
+        log = session.get(DoseLog, dose_log_id)
+        if log is None:
+            raise NotFound
+        session.delete(log)
 
 
 def schedule_rule(schedule: Schedule, medication: Medication) -> ScheduleRule:
