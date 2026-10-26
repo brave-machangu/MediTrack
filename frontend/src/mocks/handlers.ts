@@ -4,11 +4,13 @@ import type { PlannedDose } from '../api/doses'
 import type { Patient } from '../api/patients'
 import type { components } from '../api/schema'
 import { now } from '../clock'
+import { addDays } from '../dates'
 import {
   isLogFor,
   medicationsA,
   MOCK_DATE,
   MOCK_NOW,
+  pastMissedA,
   patientA,
   patients,
   plannedA,
@@ -72,7 +74,7 @@ function dayA(): PlannedDose[] {
 
 /** POST /dose-logs with the backend's rules (requirements §4.2): planned dose, one record per dose, log window. */
 export function recordMockDose(body: DoseLogCreate) {
-  const dose = plannedA.find((planned) => isLogFor(body, planned))
+  const dose = [...plannedA, ...pastMissedA].find((planned) => isLogFor(body, planned))
   if (dose === undefined) return problem(422, 'DOSE_NOT_PLANNED', 'Dose is not planned')
   if (logs.some((existing) => isLogFor(existing, dose))) return problem(409, 'DUPLICATE_DOSE_LOG', 'Dose already recorded')
   const at = now().getTime()
@@ -173,6 +175,24 @@ const hasLogs = (patientId: string) =>
     medications.some((med) => med.patient_id === patientId && med.schedules.some((schedule) => schedule.id === log.schedule_id)),
   )
 
+/** Demo Patient A's unrecorded doses past grace, today's and earlier days', newest first (AC-22, AC-24). */
+function missedA(): PlannedDose[] {
+  const earlier = pastMissedA.filter((dose) => !logs.some((log) => isLogFor(log, dose)))
+  return [...dayA().filter((dose) => dose.status === 'missed'), ...earlier].sort((a, b) =>
+    b.scheduled_for.localeCompare(a.scheduled_for),
+  )
+}
+
+/** The missed-doses range rules (AC-23): dates, `from` on or before `to`, and `to − from` at most 30 days. */
+function rangeProblems(from: string, to: string) {
+  const isDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+  if (!isDate(from)) return [{ field: 'from', message: 'Use a date like 2026-10-20.' }]
+  if (!isDate(to)) return [{ field: 'to', message: 'Use a date like 2026-10-26.' }]
+  if (from > to) return [{ field: 'from', message: 'from must be on or before to.' }]
+  if (addDays(from, 30) < to) return [{ field: 'to', message: 'The range may cover at most 31 days.' }]
+  return []
+}
+
 const findPatient = (id: unknown) => patientList.find((patient) => patient.id === id)
 const patientNotFound = () => problem(404, 'NOT_FOUND', 'Patient not found')
 
@@ -207,6 +227,17 @@ export const handlers = [
     const patient = findPatient(params.patientId)
     if (patient === undefined) return patientNotFound()
     return json(dayOf(patient, patient.id === patientA.id ? dayA() : []))
+  }),
+  http.get('/api/v1/patients/:patientId/missed-doses', ({ params, request }) => {
+    const patient = findPatient(params.patientId)
+    if (patient === undefined) return patientNotFound()
+    const query = new URL(request.url).searchParams
+    const from = query.get('from') ?? addDays(MOCK_DATE, -6)
+    const to = query.get('to') ?? MOCK_DATE
+    const errors = rangeProblems(from, to)
+    if (errors.length > 0) return validationProblem(errors)
+    const own = patient.id === patientA.id ? missedA() : []
+    return json(own.filter((dose) => from <= dose.local_date && dose.local_date <= to))
   }),
   http.get('/api/v1/patients/:patientId/medications', ({ params, request }) => {
     const patient = findPatient(params.patientId)

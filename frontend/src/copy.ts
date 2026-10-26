@@ -11,6 +11,8 @@ export const copy = {
     demoBannerLabel: 'Demo notice',
     disclaimer:
       'MediTrack records what you report. It does not give medical advice. Contact your pharmacist or doctor about missed doses.',
+    // The disclaimer's last sentence, word for word: the inset on Missed doses (DD-4, AC-38).
+    disclaimerInset: 'Contact your pharmacist or doctor about missed doses.',
     navLabel: 'Patient pages',
   },
   nav: {
@@ -256,6 +258,7 @@ export const copy = {
     count: (n: number, from: string, to: string) =>
       `${n} missed ${plural(n, 'dose', 'doses')} from ${from} to ${to}.`,
     empty: (from: string, to: string) => `No missed doses from ${from} to ${to}.`,
+    countDefault: (n: number) => `${n} missed ${plural(n, 'dose', 'doses')} in the last 7 days.`,
     emptyDefault: 'No missed doses in the last 7 days.',
     loading: 'Loading missed doses…',
     error: { title: "Couldn't load missed doses" },

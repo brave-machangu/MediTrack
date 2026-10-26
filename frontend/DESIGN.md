@@ -193,7 +193,7 @@ No confirmation dialog for Taken, Skipped or Undo. Undo is the safety net. There
 | **EmptyState** | Says what is empty and what to do | With action · without action | Heading + one sentence + optional action. No illustrations. |
 | **ErrorState** | A page or section that couldn't load | Error · retrying | Heading, mapped message, **Retry**, support reference when present. |
 | **LoadingState** | First load of a page or section | Loading | Visible text with `role="status"`, plus static placeholder blocks shaped like the content (`aria-hidden`). No spinner and no shimmer. The region is `aria-busy` while loading. |
-| **Disclaimer** | Verbatim notice from requirements §3 | Footer · inset (Missed doses page) | Same text in both places. |
+| **Disclaimer** | Verbatim notice from requirements §3 | Footer (full text) · inset on Missed doses (its last sentence only) | Word for word in both places ([DD-4](#81-lead-decisions-on-phase-a-2026-10-26)). The inset isn't a live region: it's there when the page opens. |
 | **ConfirmDialog** | Confirms a destructive action | Closed · open · confirming (busy) · error inside the dialog | Native `<dialog>` with `showModal()`. Only for **Stop medication** and **Delete schedule**. The title names the thing, the body names the consequence, and focus starts on **Cancel**. Esc = Cancel. Focus returns to the trigger. (MT-026 checks jsdom's `<dialog>` support before writing tests.) |
 
 That's the whole set for v1. The demo notice and skip link live inside AppShell. No generic wrappers, and no component used only once is split out without a reason.
@@ -756,10 +756,8 @@ Confirm dialog (Stop medication; Delete schedule uses the same layout):
 | Missed doses                          <h1> |
 |                                            |
 | +----------------------------------------+ |
-| | MediTrack records what you report. It  | |
-| | does not give medical advice. Contact  | |
-| | your pharmacist or doctor about missed | |
-| | doses.                                 | |
+| | Contact your pharmacist or doctor      | |
+| | about missed doses.                    | |
 | +----------------------------------------+ |
 |                                            |
 | Dates                             <legend> |
@@ -876,6 +874,7 @@ Words used: dose, medication, schedule, taken, skipped, missed, record. Words ne
 | `app.demoBanner` | Demo with synthetic data. Don't enter real health information. Data resets every night. | FR-13, verbatim |
 | `app.demoBannerLabel` | Demo notice | Accessible name of the `role="note"` |
 | `app.disclaimer` | MediTrack records what you report. It does not give medical advice. Contact your pharmacist or doctor about missed doses. | Requirements §3, verbatim |
+| `app.disclaimerInset` | Contact your pharmacist or doctor about missed doses. | The disclaimer's last sentence, verbatim: the Missed doses inset (DD-4) |
 | `app.navLabel` | Patient pages | `nav` label |
 | `nav.today` | Today | |
 | `nav.medications` | Medications | |
@@ -1093,6 +1092,7 @@ Words used: dose, medication, schedule, taken, skipped, missed, record. Words ne
 | `missed.show` | Show missed doses | |
 | `missed.count` | {n} missed doses from {from} to {to}. | "1 missed dose…" when 1 |
 | `missed.empty` | No missed doses from {from} to {to}. | |
+| `missed.countDefault` | {n} missed doses in the last 7 days. | If the patient's today isn't known yet; "1 missed dose…" when 1 |
 | `missed.emptyDefault` | No missed doses in the last 7 days. | If the patient's today isn't known yet |
 | `missed.loading` | Loading missed doses… | |
 | `missed.error.title` | Couldn't load missed doses | |
@@ -1134,7 +1134,7 @@ The percentage is shown with one decimal place, as the API returns it ("50.0%").
 |---|---|
 | DD-1: cards stay in place | **Approved, clarified.** Background refreshes may update a card's status, but not its position. Cards regroup only on reload, on navigating away and back, or with the visible **Refresh** control ([§4.1](#41-today-grouping-and-order)). |
 | DD-2: Undo only while the dose can be recorded again | **Approved.** Undoing after the window closes would turn the dose into a missed dose that can't be fixed. Once Undo is gone, one line explains why ([§4.2](#42-recording-and-undo)). |
-| DD-4: missed-dose copy follows AC-38 | **Approved.** The docs win over the prompt. |
+| DD-4: missed-dose copy follows AC-38 | **Approved.** The docs win over the prompt. **Inset clarified in MT-027:** it shows only the disclaimer's last sentence, word for word, as the prompt asks. The full disclaimer stays in every page's footer, so AC-38's "plus the disclaimer" still holds. |
 | Status colours alike in greyscale | **Accepted**, because label, icon and badge style carry the meaning. Evidence: one greyscale screenshot of Today in the Phase B (MT-025) pull request. |
 | Q1: dose notes | **Out of v1.** No note field in the UI. FR-05 notes are API-only in v1; docs follow-up in issue #42. |
 | Q2: font | **Device built-in fonts.** No web font. |
@@ -1154,6 +1154,12 @@ The percentage is shown with one decimal place, as the API returns it ("50.0%").
 | DD-10 | After Taken or Skipped succeeds, focus moves to the result line, not to Undo. | A second Enter press can't undo by accident. |
 | DD-11 | A failed recording shows **Retry** + **Cancel** in place of Taken / Skipped. | Keeps one primary action on the card, and satisfies AC-36. |
 | DD-12 | No "remember last patient". `/` always shows the patient list. | Less hidden state, and nothing to explain. The prompt allows remembering but doesn't require it. |
+
+### 8.3 Rules proposed in MT-027 (for Lead approval)
+
+| # | Decision | Why |
+|---|---|---|
+| DD-13 | A dose recorded on Missed doses keeps its card in place, showing the confirmed record and **Undo** while its window is open, until the list is loaded again. The count line follows the server's list, so it drops by one. A card the server stops listing for any other reason (recorded elsewhere) goes. | The server leaves recorded doses out (AC-24). Removing the card would take the confirmation and keyboard focus with it, against DD-1 and principle 3. |
 
 ## 9. Traceability
 
