@@ -4,6 +4,7 @@ import { problem } from './handlers'
 const todayDoses = '/api/v1/patients/:patientId/doses'
 const doseLogs = '/api/v1/dose-logs'
 const medications = '/api/v1/patients/:patientId/medications'
+const patientList = '/api/v1/patients'
 const outage = () => problem(503, 'SERVICE_UNAVAILABLE', 'Service unavailable')
 
 /**
@@ -29,6 +30,12 @@ export const scenarios: Record<string, () => RequestHandler[]> = {
     }),
   ],
   'medications-error': () => [http.get(medications, outage)],
+  'patients-loading': () => [
+    http.get(patientList, async () => {
+      await delay('infinite')
+    }),
+  ],
+  'patients-error': () => [http.get(patientList, outage)],
   // The first load works and later ones fail, which leaves stale data on screen.
   'today-stale': () => {
     let calls = 0

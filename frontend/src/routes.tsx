@@ -3,7 +3,7 @@ import { AppShell } from './components/AppShell/AppShell'
 import { MedicationsPage } from './pages/medications/MedicationsPage'
 import { MissedPage } from './pages/MissedPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { PatientsPage } from './pages/PatientsPage'
+import { PatientsPage } from './pages/patients/PatientsPage'
 import { SummaryPage } from './pages/SummaryPage'
 import { TodayPage } from './pages/today/TodayPage'
 

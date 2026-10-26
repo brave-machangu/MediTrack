@@ -3,7 +3,7 @@ import { MedicationForm } from './MedicationForm'
 import { MedicationItem } from './MedicationItem'
 import { ScheduleSection } from './ScheduleSection'
 import styles from './medications.module.css'
-import type { OpenForm, OpenFormState } from './useOpenForm'
+import type { OpenForm, OpenFormState } from './forms'
 
 type Forms = Pick<OpenFormState, 'open' | 'focusIf' | 'cancel' | 'onSaved'>
 
