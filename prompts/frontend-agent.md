@@ -80,6 +80,7 @@ The disclaimer from requirements §3 appears on **every** page (AC-27), together
 | `SCHEDULE_OVERLAP` | "This medication already has a schedule on those days. End the current schedule first; the new one can start the next day." |
 | `SERVICE_UNAVAILABLE` | "MediTrack is temporarily unavailable. Please try again in a moment." (with **Retry**) |
 | `NOT_FOUND` | "We couldn't find that. It may have been removed." |
+| `METHOD_NOT_ALLOWED` | "Something went wrong. Please try again." (the UI never sends an unsupported method; added by #47) |
 | `INTERNAL_ERROR` / other | "Something went wrong. Please try again." (log `trace_id` to the console only in development) |
 
 **Accessibility (NFR-01, AC-28)**

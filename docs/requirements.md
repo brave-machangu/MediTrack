@@ -73,6 +73,7 @@ Status of a planned dose:
   - **DST gap** (local time doesn't exist): the dose shifts forward by the length of the gap. Example: `Europe/London`, 2027-03-28, `01:30` → `01:30Z`, shown as local `02:30`.
   - **DST overlap** (local time happens twice): the dose is planned once, at the first occurrence.
 - If two times of the **same schedule** convert to the same UTC instant (possible in a DST gap), only one planned dose is produced.
+- **Known edge case:** a dose belongs to the patient-local date on which it actually happens. If a DST gap starts late in the evening (e.g. `America/Nuuk`, where clocks jump from 23:00 to 00:00), a dose shifted forward by the gap moves to the next day. If the schedule also has that later time, the two are planned **once**, shown on the next day: Saturday `23:30` and Sunday `00:30` become one dose on Sunday. A skipped calendar day (`Pacific/Apia`, 2011-12-30) works the same way. Start date, end date and weekdays still apply to the date the user configured.
 - **Timezone changes:** because planned doses are computed on read (ADR-002), a patient's timezone can only be changed while the patient has **no dose logs**. Otherwise the request returns **409** `PATIENT_HAS_LOGS`. Known v1 limitation; a timezone history is a later improvement.
 
 ### 4.4 Changing schedules and medications
@@ -100,7 +101,7 @@ For a patient and a local date:
 | FR-02 | Add, edit, and deactivate medications for a patient | P0 |
 | FR-03 | Add, edit, end and remove schedules (times, days, start/end date, grace period), following §4.4 | P0 |
 | FR-04 | Show a patient's planned doses for a local date with their status | P0 |
-| FR-05 | Record a dose as taken or skipped, with an optional note | P0 |
+| FR-05 | Record a dose as taken or skipped, with an optional note. In v1 the optional note is API-only and not shown in the web app (`PlannedDose` doesn't return it, so the UI could save a note but never show it back; #42) | P0 |
 | FR-06 | Prevent duplicate dose records | P0 |
 | FR-07 | Undo a dose record | P1 |
 | FR-08 | List missed doses for a date range (default: last 7 days) | P0 |
@@ -128,7 +129,7 @@ For a patient and a local date:
 
 ## 7. Out of scope for v1
 
-Push/SMS notifications, multiple caregivers sharing a patient, pharmacy integration, refill tracking, native mobile apps, AI features in the product itself.
+Push/SMS notifications, multiple caregivers sharing a patient, pharmacy integration, refill tracking, native mobile apps, AI features in the product itself, a dose-note field in the web app (later option: a `contract-change` issue to add `note` to `PlannedDose`, then a note field in the UI).
 
 ## 8. Decisions
 

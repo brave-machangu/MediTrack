@@ -404,7 +404,7 @@ docker run --rm meditrack-backend:test python -c "from zoneinfo import ZoneInfo;
 **Acceptance criteria**
 
 - [ ] Build arg FAULT_DOSE_LOG_ERROR_RATE (default 0) makes that share of POST /dose-logs return 500 INTERNAL_ERROR
-- [ ] Image gets label meditrack.fault=true when rate > 0
+- [ ] The Dockerfile passes build arg FAULT_DOSE_LOG_ERROR_RATE to the app (default 0); the meditrack.fault=true label is added by the MT-032 build step, not the Dockerfile
 - [ ] Tests cover rate 0 (never fails) and 1 (always fails)
 
 **Verification**
@@ -620,7 +620,7 @@ Lead confirms both environments are reachable
 - [ ] OPS-03, OPS-04, OPS-11
 - [ ] Images tagged with git SHA; deployments recorded in GitHub Deployments
 - [ ] Post-deploy smoke test; automatic redeploy of previous SHA if it fails
-- [ ] Deploy workflow has an inject_fault input (dev only) that builds the MT-023 faulty image
+- [ ] Deploy workflow has an inject_fault input (dev only) that builds the MT-023 faulty image with `--build-arg FAULT_DOSE_LOG_ERROR_RATE=<rate>` and, when the rate is > 0, `docker build --label meditrack.fault=true`
 - [ ] Production job refuses images labelled meditrack.fault=true
 - [ ] FR-14: every deploy runs `python -m app.seed --reset` after migrations
 - [ ] OPS-16: .github/workflows/reset-demo.yml resets dev and prod nightly at 03:00 UTC and can be run by hand
