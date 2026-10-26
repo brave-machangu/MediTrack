@@ -2,70 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
-from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from httpx2 import Response
 from sqlalchemy import Engine
-from sqlalchemy.orm import Session
 
-from app.db.models import DoseLog, Medication, Schedule
-
-# A parsed JSON body: its shape is exactly what each test asserts, so it stays untyped.
-Json = dict[str, Any]
-
-PATIENTS = "/api/v1/patients"
-DEMO_PATIENT = {"display_name": "Demo Patient A", "timezone": "Africa/Harare"}
-
-
-def create_patient(api: TestClient, **fields: str) -> Json:
-    response = api.post(PATIENTS, json={**DEMO_PATIENT, **fields})
-    assert response.status_code == 201, response.text
-    body: Json = response.json()
-    return body
-
-
-def assert_problem(response: Response, status: int, code: str) -> Json:
-    assert response.status_code == status
-    assert response.headers["content-type"] == "application/problem+json"
-    body: Json = response.json()
-    assert (body["status"], body["code"]) == (status, code)
-    return body
-
-
-def add_dose_log(engine: Engine, patient_id: str) -> None:
-    """Record one dose for the patient directly; the dose-log endpoint arrives in MT-016."""
-    created = datetime(2026, 11, 1, tzinfo=UTC)
-    with Session(engine) as session, session.begin():
-        medication = Medication(
-            patient_id=UUID(patient_id),
-            name="Demo Med Alpha",
-            dosage_label="1 tablet",
-            created_at=created,
-        )
-        session.add(medication)
-        session.flush()
-        schedule = Schedule(
-            medication_id=medication.id,
-            times_of_day=["08:00"],
-            days_of_week=[1, 2, 3, 4, 5, 6, 7],
-            start_date=date(2026, 11, 1),
-            grace_period_minutes=60,
-        )
-        session.add(schedule)
-        session.flush()
-        session.add(
-            DoseLog(
-                schedule_id=schedule.id,
-                scheduled_for=datetime(2026, 11, 1, 6, tzinfo=UTC),
-                status="taken",
-                recorded_at=datetime(2026, 11, 1, 6, 5, tzinfo=UTC),
-                late=False,
-            )
-        )
+from tests.integration.helpers import (
+    DEMO_PATIENT,
+    PATIENTS,
+    Json,
+    add_logged_dose,
+    assert_problem,
+    create_patient,
+)
 
 
 def test_created_patient_is_listed_ac01(api: TestClient) -> None:
@@ -144,7 +94,7 @@ def test_timezone_change_allowed_without_logs_ac13(api: TestClient) -> None:
 
 def test_timezone_change_rejected_once_logged_ac13(api: TestClient, engine: Engine) -> None:
     patient = create_patient(api)
-    add_dose_log(engine, patient["id"])
+    add_logged_dose(engine, patient["id"])
 
     response = api.patch(f"{PATIENTS}/{patient['id']}", json={"timezone": "Europe/London"})
 
@@ -156,7 +106,7 @@ def test_name_change_with_unchanged_timezone_allowed_once_logged(
     api: TestClient, engine: Engine
 ) -> None:
     patient = create_patient(api)
-    add_dose_log(engine, patient["id"])
+    add_logged_dose(engine, patient["id"])
     response = api.patch(
         f"{PATIENTS}/{patient['id']}",
         json={"display_name": "Demo Patient B", "timezone": "Africa/Harare"},
