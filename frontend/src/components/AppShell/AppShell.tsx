@@ -7,6 +7,7 @@ import { NotFoundPage } from '../../pages/NotFoundPage'
 import { Disclaimer } from '../Disclaimer/Disclaimer'
 import styles from './AppShell.module.css'
 import { PatientNav } from './PatientNav'
+import { PatientSwitcher } from './PatientSwitcher'
 
 export function AppShell() {
   const patientId = useMatch('/patients/:patientId/*')?.params.patientId
@@ -29,7 +30,13 @@ export function AppShell() {
           <Link to="/" className={styles.appName}>
             {copy.app.name}
           </Link>
-          {patient.data && <p className={styles.patient}>{copy.patient.current(patient.data.display_name)}</p>}
+          {patient.data && patientId !== undefined ? (
+            <div className={styles.patientArea}>
+              <p className={styles.patient}>{copy.patient.current(patient.data.display_name)}</p>
+              {/* Keyed by patient, so it is closed again after switching. */}
+              <PatientSwitcher key={patientId} patientId={patientId} />
+            </div>
+          ) : null}
         </header>
         {patientId !== undefined && !patientMissing && <PatientNav patientId={patientId} />}
       </div>

@@ -117,6 +117,39 @@
   padding-block: var(--space-5);
 }
 
+/* Baseline: the name stays level with the button's text when the list below the button is open. */
+.patientArea {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+}
+
+/* The list opens in the header band itself, pushing the page down rather than floating over it. */
+.switcher {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.switcherList {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.switcherLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
 @media (min-width: 37.5em) {
   .header {
     flex-direction: row;
