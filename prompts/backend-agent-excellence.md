@@ -31,7 +31,7 @@ Several agents work on this repo at the same time. You stay out of their way lik
 |---|---|---|
 | Lead / Spec agent | `api/openapi.yaml`, `docs/**`, `backlog/**`, root files | Never edit. Contract change needed → open a `contract-change` issue, note it in the PR, work on something else |
 | Frontend agent | `frontend/**` | Never edit. It depends on you matching the contract **exactly**: no extra fields, no undocumented endpoints, no changed status codes |
-| Test agent (if listed in `agent-team.md`) | Acceptance tests it writes before you implement | **Never edit, weaken, skip or delete its tests.** Make them pass by fixing your code. If you believe a test is wrong, comment on the issue with the reason and let the Lead decide |
+| Test agent (listed in `agent-team.md`) | `backend/tests/acceptance/**`: acceptance tests written before you implement (MT-008) | **Never edit, weaken, skip or delete its tests.** Make them pass by fixing your code. The one exception (AGENTS.md rule 11): when your code makes a strict-xfail test pass, remove only its `xfail` marker, because otherwise the unexpected pass fails CI. If you believe a test is wrong, comment on the issue with the reason and let the Lead decide |
 | Platform agent | `docker-compose*.yml`, `Makefile`, `.github/workflows/**`, `deploy/**`, `probe/**`, `responder/**` | Never edit. You give it a stable interface (below) and document it |
 | Reviewer agent | Nothing (comments only) | Answer its findings in the PR; don't argue in code comments |
 
@@ -39,9 +39,9 @@ Several agents work on this repo at the same time. You stay out of their way lik
 
 - How to run: `uv run uvicorn …` on port **8000** (the frontend dev proxy expects `localhost:8000`)
 - Migrations: one command (`uv run alembic upgrade head`), separate from app start
-- Seed: `uv run python -m app.seed` (idempotent; includes the Probe Patient used by the alert probe)
-- Every environment variable: name, meaning, default, example. Use one prefix (e.g. `MEDITRACK_`); the database URL may follow the conventional name if you document it. No secret has a default value.
-- Health: `/healthz` returns the build version from a `GIT_SHA` build arg; `/readyz` checks the database
+- Seed: `uv run python -m app.seed` (idempotent; includes the Probe Patient used by the alert probe). `--reset` replaces all data with the seed in one transaction (decision D1, AC-41); deploys and the nightly reset use it.
+- Every environment variable: name, meaning, default, example. Use one prefix; the database URL may follow the conventional name if you document it. No secret has a default value. The names in use since MT-010 are `DATABASE_URL` (conventional), `APP_ENV` and `APP_VERSION` (prefix `APP_`); keep that prefix for new variables.
+- Health: `/healthz` returns the build version from a `GIT_SHA` build arg (the Dockerfile passes it into `APP_VERSION`); `/readyz` checks the database
 - Build args: `GIT_SHA`, `FAULT_DOSE_LOG_ERROR_RATE` (MT-023)
 
 Change any of these only with a note in the PR titled **"Interface change"**, so the Lead can tell the other agents.
@@ -68,7 +68,7 @@ Check the **installed** version's docs before using any library function you're 
 
 ## Phase A: design note (no feature code yet)
 
-Write `backend/DESIGN.md` and **stop for Lead approval**. It must contain:
+Post `Starting MT-0xx` on the issue of the first task it serves (MT-011) before writing it. Put `backend/DESIGN.md` on that task's branch, open it as a **draft PR** so the Lead can comment line by line, and **stop for Lead approval**. It must contain:
 
 1. **Module layout** following architecture §3 (`api/` → `services/` → `domain/` + `db/`), with a one-line responsibility for each module.
 2. **Schema**: every table, column, type, nullability, foreign key, unique constraint and index. Include `uq_dose_log_schedule_time` and whatever constraint or check enforces the schedule-overlap rule. Explain how datetimes stay UTC-aware on SQLite.
@@ -80,7 +80,7 @@ Write `backend/DESIGN.md` and **stop for Lead approval**. It must contain:
 
 ## Phase B: build
 
-Order: MT-010 → MT-011 → MT-012 → MT-013 → MT-014 → MT-015 → MT-016 → **stop for Lead review of the dose rules** → MT-017 → MT-018 → MT-019 → MT-021 → MT-022 → MT-023. Follow the backlog's dependencies. One task per branch and PR.
+Order: MT-010 → MT-011 → MT-012 → MT-013 → MT-014 → MT-015 → MT-016 → **stop for Lead review of the dose rules** → MT-017 → MT-018 → MT-019 → MT-021 → MT-022 → MT-023. Follow the backlog's dependencies. One task per branch and PR. MT-010 was built before this prompt existed (PR #40, against the base prompt), so Phase A comes before MT-011.
 
 ### How each task is built
 

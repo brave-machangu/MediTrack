@@ -21,7 +21,7 @@ The bar: a reviewer opening this app should think "a careful human team built th
 
 On behaviour, the docs and contract win. If they conflict or are missing something a screen needs, stop and ask the Lead. Never fill gaps with guesses.
 
-You may only edit files under `frontend/`.
+You may only edit files under `frontend/`, except `frontend/src/test/acceptance/**`, which belongs to the Test agent (`docs/agent-team.md`). Never edit, weaken, skip or delete those tests. The one exception: when your code makes one pass, remove only its expected-failure marker (AGENTS.md rule 11).
 
 ## Fixed technical choices (don't re-decide these)
 
@@ -43,20 +43,20 @@ Before using any library function, check the **installed** version's docs. TanSt
 
 ## Phase A: design brief (no feature code yet)
 
-Write `frontend/DESIGN.md` and **stop for Lead approval**. It must contain:
+Post `Starting MT-020` on the issue first. Write `frontend/DESIGN.md` on the MT-020 branch, open it as a **draft PR** (`Part of #20`) so the Lead can comment line by line, and **stop for Lead approval**. It must contain:
 
 1. **Principles** (5 max, specific to these users, e.g. "One primary action per dose card").
 2. **Tokens**: colour palette with contrast ratios checked (text ≥ 4.5:1, large text and UI ≥ 3:1), type scale (body ≥ 18 px, dose time ≥ 28 px), spacing scale (4 px base), radius (one or two values), focus ring, motion (≤ 150 ms, none under `prefers-reduced-motion`).
 3. **Status system**: for each status (Upcoming, Due now, Missed, Taken, Taken late, Skipped) the label, icon, colour and text colour. It must be readable in greyscale.
-4. **Component inventory**: AppShell, PatientSwitcher, DoseCard, StatusBadge, Button (primary/secondary/quiet/danger), Field (input/select/date with error text), EmptyState, ErrorState (with Retry), LoadingState, Disclaimer, ConfirmDialog (only for destructive actions). For each, list its states.
+4. **Component inventory**: AppShell, PatientSwitcher, DoseCard, StatusBadge, Button (primary/secondary/quiet/danger), Field (input/select/date with error text), EmptyState, ErrorState (with Retry and the support reference from `X-Trace-Id`), LoadingState, Disclaimer, DemoBanner (FR-13 text, AC-40), ConfirmDialog (only for destructive actions). For each, list its states.
 5. **Wireframes** in ASCII for every page at 375 px wide, plus Today at 1280 px.
-6. **Copy deck**: every page title, button label, empty state, success message and error message, in final wording.
+6. **Copy deck**: every page title, button label, empty state, success message and error message, in final wording. In MT-020 it becomes `src/copy.ts`, the single home of user-facing text that the safety copy check scans (AC-38).
 
 The design direction is **calm, clear and trustworthy**: like a well-designed pharmacy leaflet or a good government service (think GOV.UK or NHS app clarity), not a startup landing page. Mostly white space and dark text, one restrained accent colour, colour reserved for meaning.
 
 ## Phase B: build
 
-Order: MT-020 scaffold + primitives → MT-025 Today → **stop for Lead review of Today** → MT-026 → MT-024 → MT-027 → MT-028 → MT-029. One task per branch and PR, as in `prompts/frontend-agent.md`.
+Order: MT-020 scaffold + primitives → MT-025 Today → **stop for Lead review of Today** → MT-026 → MT-024 → MT-027 → MT-028 → MT-029. One task per branch and PR, as in `prompts/frontend-agent.md`. If the Test agent's acceptance tests from MT-008 exist, make them pass by changing your code and removing only their markers.
 
 ### The Today page is the product. Get it right.
 
@@ -107,7 +107,7 @@ Loading (skeleton or calm text, no spinner-only screens), empty, error with **Re
 - Use "Seamlessly", "Effortlessly", "Empower", "Unlock", "Elevate", "Journey" or "Delve"
 - Use exclamation marks, cheerleading ("Great job!"), or guilt ("You missed your meds!")
 - Use vague empty states ("Nothing here yet!"). Say what's empty and what to do: "No medications yet. Add the first one to start a schedule."
-- Give any medical advice, ever. Missed-dose copy may only say: "Contact your pharmacist or doctor if you're unsure what to do."
+- Give any medical advice, ever. Missed-dose screens may only say that no dose was recorded, plus the disclaimer from `docs/requirements.md` §3, word for word: "Contact your pharmacist or doctor about missed doses." (AC-38)
 - Use mixed terms for one thing. Pick "dose", "medication", "schedule", "taken", "skipped" and use only those.
 
 ### Code: don't
