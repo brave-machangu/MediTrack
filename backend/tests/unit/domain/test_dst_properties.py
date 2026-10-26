@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo, available_timezones
 from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
-from app.domain.scheduling import planned_doses, planned_doses_between
+from app.domain.scheduling import local_to_utc, planned_doses, planned_doses_between
 from tests.unit.domain.factories import RULES, make_schedule, utc
 
 ZONES = sorted(available_timezones())
@@ -85,6 +85,22 @@ def test_no_schedule_plans_one_instant_twice_ac39(
     doses = planned_doses_between([schedule], [], tz, day - ONE_DAY, day + ONE_DAY, NOW, RULES)
     instants = [dose.scheduled_for for dose in doses]
     assert len(instants) == len(set(instants))
+
+
+@settings(max_examples=300, deadline=None, print_blob=True)
+@given(zone_and_date=zones_and_dates(), times=schedule_times)
+@example(zone_and_date=NUUK_GAP, times=[time(23, 30)])
+@example(zone_and_date=APIA_SKIPPED_DAY, times=[time(8, 0)])
+def test_every_configured_dose_is_planned_exactly_once(
+    zone_and_date: tuple[ZoneInfo, date], times: list[time]
+) -> None:
+    # A dose that a gap pushes past midnight must show up on the next day, not vanish.
+    tz, day = zone_and_date
+    schedule = make_schedule(*(t.strftime("%H:%M") for t in times))
+    doses = planned_doses_between([schedule], [], tz, day, day + ONE_DAY, NOW, RULES)
+    instants = [dose.scheduled_for for dose in doses]
+    for local_time in times:
+        assert instants.count(local_to_utc(day, local_time, tz)) == 1
 
 
 @settings(max_examples=300, deadline=None, print_blob=True)
