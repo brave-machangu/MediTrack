@@ -7,6 +7,9 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Fixed by api/openapi.yaml (ScheduleCreate.grace_period_minutes), so not configurable.
+GRACE_PERIOD_MAX_MINUTES = 240
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=None, extra="ignore", populate_by_name=True)
