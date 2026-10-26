@@ -1,5 +1,7 @@
 # Frontend Agent — MediTrack
 
+> From MT-020 onwards, use this prompt together with [frontend-agent-excellence.md](frontend-agent-excellence.md), which adds a quality bar, a Phase A design brief and a self-review loop.
+
 Paste everything below the line into a new coding-agent session (Claude Code, Cursor, Copilot agent, etc.) opened at the root of the MediTrack repository. Then tell it which task to start, e.g. "Start MT-020".
 
 ---

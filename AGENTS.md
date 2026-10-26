@@ -46,4 +46,4 @@ MediTrack is a medication reminder and adherence tracker for older adults and ca
 | Telemetry, alert, rollback, responder agent | [docs/operations.md](docs/operations.md) |
 | Security and privacy | [docs/security.md](docs/security.md) |
 | Backlog | [backlog/tasks.md](backlog/tasks.md) |
-| Agent prompts | [prompts/](prompts/) |
+| Agent prompts | [prompts/](prompts/): base prompt per role; Frontend and Backend also use their `*-excellence.md` edition (from MT-020 and MT-011) |

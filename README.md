@@ -45,8 +45,8 @@ Details and decisions: [docs/architecture.md](docs/architecture.md) · API contr
 |---|---|
 | Lead (human) | Requirements, contract, backlog, approvals, merges, production deploys |
 | Spec agent | Docs, contract and backlog drafts (by PR) |
-| Frontend agent | `frontend/` — [prompt](prompts/frontend-agent.md) |
-| Backend agent | `backend/` — [prompt](prompts/backend-agent.md) |
+| Frontend agent | `frontend/` — [prompt](prompts/frontend-agent.md) + [Excellence edition](prompts/frontend-agent-excellence.md) from MT-020 |
+| Backend agent | `backend/` — [prompt](prompts/backend-agent.md) + [Excellence edition](prompts/backend-agent-excellence.md) from MT-011 |
 | Reviewer agent | Independent review of every PR — [prompt](prompts/reviewer-agent.md) |
 | Test agent | Writes acceptance tests for the riskiest rules *before* they are implemented — [prompt](prompts/test-agent.md) |
 | Platform agent (later) | Docker Compose, CI/CD, observability |
@@ -97,7 +97,7 @@ Unit, integration (PostgreSQL), contract, frontend component and end-to-end smok
 
 Details: [docs/operations.md](docs/operations.md) · Security and privacy: [docs/security.md](docs/security.md)
 
-Hosting is one small VM running Docker Compose for dev and prod, with the Grafana stack on the same VM. The provider is chosen in MT-033.
+Hosting is one small VM running Docker Compose for dev and prod, with the Grafana stack on the same VM. Provider: AWS Lightsail 4 GB (US$24/month); credit terms and the billing alarm are in [docs/architecture.md §6.1](docs/architecture.md#61-price-check-2026-10-26). MT-033 creates it.
 
 ## Decisions
 
@@ -106,7 +106,7 @@ Recorded in MT-001 (2026-10-26):
 | # | Decision | Outcome |
 |---|---|---|
 | D1 | Accounts in v1 | No accounts. Demo data resets to the synthetic seed on every deploy and nightly, and every page warns not to enter real health data. A per-visitor private workspace is a later option. |
-| D2 | Hosting | One small Linux VM running Docker Compose (dev and prod as two projects); hosted platform + managed PostgreSQL as fallback. Provider still to pick from the [price check](docs/architecture.md#61-price-check-2026-10-26). |
+| D2 | Hosting | One small Linux VM running Docker Compose (dev and prod as two projects); hosted platform + managed PostgreSQL as fallback. Provider: AWS Lightsail 4 GB (US$24/month); credit terms and billing alarm in [§6.1](docs/architecture.md#61-price-check-2026-10-26). |
 | D3 | Deployed telemetry | The same Grafana stack on the VM, behind a login |
 | D4 | Investigation agent | Approved with limits: pinned model, spend-capped key stored only as a secret, report-only mode until the drill works, never merges, deploys or sees production secrets |
 | D5 | Schedule overlap rule | Adopted: no two schedules of one medication on the same weekday and dates (`SCHEDULE_OVERLAP`) |

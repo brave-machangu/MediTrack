@@ -26,7 +26,10 @@ FENCE = re.compile(r"```.*?```", re.S)
 
 
 def markdown_files() -> list[Path]:
-    return sorted(p for p in ROOT.rglob("*.md") if not SKIP_DIRS.intersection(p.relative_to(ROOT).parts))
+    def skipped(parts: tuple[str, ...]) -> bool:
+        return bool(SKIP_DIRS.intersection(parts)) or parts[:2] == (".claude", "worktrees")
+
+    return sorted(p for p in ROOT.rglob("*.md") if not skipped(p.relative_to(ROOT).parts))
 
 
 def slug(heading: str) -> str:

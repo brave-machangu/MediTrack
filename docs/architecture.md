@@ -105,7 +105,7 @@ frontend/
 
 ## 6. Deployment options
 
-**Decision D2 (2026-10-26): option A**, one small Linux VM running Docker Compose, with option B as the fallback. The provider is chosen in MT-033 from the price check in §6.1. Prices and free tiers change often, so re-check the provider's pricing page on the day you buy.
+**Decision D2 (2026-10-26): option A**, one small Linux VM running Docker Compose, with option B as the fallback. Provider: **AWS Lightsail 4 GB** (US$24/month), chosen from the price check in §6.1; MT-033 creates it. Prices and free tiers change often, so re-check the provider's pricing page on the day you buy.
 
 | Option | How | Pros | Cons |
 |---|---|---|---|
@@ -119,7 +119,7 @@ Target size: at least 2 vCPU, 4 GB RAM and 40 GB disk with a public IPv4. Two Co
 
 | Provider / plan | Monthly | vCPU / RAM / disk / traffic | Notes |
 |---|---|---|---|
-| **AWS Lightsail** 4 GB | **$24** with IPv4 ✔ ($20 IPv6-only) | 2 / 4 GB / 80 GB / 4 TB, x86 | AWS Free Tier for new accounts: about $100 credit (up to $200), 6 months. Most new customers need no payment method. A free-plan account closes when the credits run out or after 6 months. Regions in Asia, South America and elsewhere. **Recommended**: two months of the course are about $48, which the credit should cover. |
+| **AWS Lightsail** 4 GB | **$24** with IPv4 ✔ ($20 IPv6-only) | 2 / 4 GB / 80 GB / 4 TB, x86 | AWS Free Tier for new accounts: about $100 credit (up to $200), 6 months. Most new customers need no payment method. A free-plan account closes when the credits run out or after 6 months. Regions in Asia, South America and elsewhere. **Chosen (D2)**: two months of the course are about $48, which the credit covers. |
 | Akamai/Linode 4 GB | $24 | 2 / 4 GB / 80 GB / 4 TB, x86 | $100 new-user credit (60 days, card required). **Runner-up.** |
 | Vultr regular 2c/4 GB | $20 ($30 São Paulo) | 2 / 4 GB / 80 GB / 3 TB, x86 | Cheapest without credits; IPv4 inclusion only partly verified |
 | DigitalOcean Basic 4 GiB | $24, IPv4 included | 2 / 4 GiB / 80 GiB / 4 TB, x86 | Billed per second; no sign-up credit confirmed |
@@ -130,7 +130,27 @@ Target size: at least 2 vCPU, 4 GB RAM and 40 GB disk with a public IPv4. Two Co
 
 Fallback B pieces: Render free web services sleep after 15 minutes and free Postgres expires after 30 days (Starter $7/mo, Postgres $6/mo). Fly.io has no free tier (machines from about $2–7/mo; managed Postgres from $38/mo). Railway Hobby is $5/mo, including $5 of usage. The Cloud Run free tier needs a billing account. Neon free tier: 1 GB per project, sleeps after 5 minutes. Grafana Cloud free tier: 10k metric series, 50 GB logs and 50 GB traces, 14-day retention.
 
-**Next step (Lead, MT-033):** pick a provider (Lightsail recommended), confirm the price and credit terms on the order page, and create the VM. No account or credential has been created by an agent.
+**AWS credit terms** (from AWS's own pages on 2026-10-26; re-read them on the day you sign up):
+
+- **Amount:** every new AWS account gets **US$100 in credits** at sign-up, on either plan, plus up to US$100 more for completing "Explore AWS" activities within 6 months. Credits are applied automatically to charges of participating services. Lightsail's FAQ says you can "get started with Amazon Lightsail for free with the AWS Free Tier where you can get up to $200 USD in free AWS credits".
+- **Free plan** (the default): nothing is ever charged. It ends after **6 months or when the credits are used up, whichever comes first**. The account then **closes automatically** and its resources and data become unreachable. AWS keeps the content for 90 days, and upgrading to the Paid plan in that time restores access; after that, everything is deleted.
+- **Paid plan:** usage beyond the credit balance is billed to your card, and the account stays open when credits run out. Credits left over on upgrade carry over to future bills.
+- **Expiry:** AWS's pages disagree. The general FAQ says credits expire 6 months after account creation, the Paid-plan FAQ says 12 months, and activity credits expire 12 months after creation. Plan for 6.
+- **Not confirmed by AWS:** whether the Free plan lets you create the 4 GB bundle (the Free plan covers "select" services, and no page lists Lightsail bundle sizes). If the console refuses it, upgrade to the Paid plan; your credits carry over.
+- **Lightsail billing:** hourly up to the monthly price. Instances are billed **while stopped**, so delete one to stop paying. A static IP is free while attached and $0.005/hour if left unattached for more than an hour. Snapshots cost $0.05/GB-month.
+- **What US$100 buys:** about 4 months of the 4 GB bundle on its own (US$24/month); snapshots and extra transfer come out of the same credit.
+
+**Billing alarm, before you create the instance:** in Billing and Cost Management, create a monthly **cost budget of US$30** that tracks **unblended** cost (usage before credits, not "net unblended"), with email alerts at 100% of actual cost and 100% of forecasted cost. Expected usage is about US$24/month, so lower thresholds (50%, 80%) would fire every month by design. On the Free plan, AWS also emails you about the credit balance and the plan's end automatically. **If you move to the Paid plan, don't set its spend limit at the US$20 minimum.** AWS's FAQ says that when a project reaches its spend limit, AWS "will pause your project and stop its resources" until the next month, which would take dev and prod down mid-month and fire the user-impact alert. Set it to at least US$40, or leave it unset and rely on the budget. AWS doesn't say whether the limit counts usage before or after credits. Put a calendar reminder at month 3 to either upgrade or tear the VM down.
+
+**Next step (Lead, MT-033):** create the AWS account, set the billing alarm, then create the Lightsail 4 GB instance in the region closest to you and your reviewers. No account or credential has been created by an agent.
+
+**Sources** (checked 2026-10-26; ✔ = re-read directly, others gathered by a research session):
+- AWS: [Lightsail pricing](https://aws.amazon.com/lightsail/pricing/) ✔ · [Lightsail billing FAQ](https://docs.aws.amazon.com/lightsail/latest/userguide/amazon-lightsail-frequently-asked-questions-faq-billing-and-account-management.html) ✔ · [Free Tier FAQs](https://aws.amazon.com/free/free-tier-faqs/) ✔ · [Choosing a plan (Free vs Paid)](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/free-tier-plans.html) ✔ · [AWS Free Tier](https://aws.amazon.com/free/) · [Lightsail regions](https://docs.aws.amazon.com/lightsail/latest/userguide/understanding-regions-and-availability-zones-in-amazon-lightsail.html)
+- Hetzner: [price adjustment, 15 June 2026](https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/) ✔ · [Cloud overview](https://www.hetzner.com/cloud/) · [cost-optimized plans](https://www.hetzner.com/cloud/cost-optimized/) · [regular-performance plans](https://www.hetzner.com/cloud/regular-performance/) · [IPv4 pricing](https://docs.hetzner.com/general/infrastructure-and-availability/ipv4-pricing/) · [status page](https://status.hetzner.com/)
+- DigitalOcean: [Droplet pricing](https://www.digitalocean.com/pricing/droplets) · [regions](https://docs.digitalocean.com/platform/regional-availability/)
+- Vultr: [plans API](https://api.vultr.com/v2/plans) (the pricing website blocks scripted requests) · Akamai/Linode: [pricing](https://www.akamai.com/cloud/pricing) (blocks scripted requests; read in a browser)
+- Oracle: [Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm) · Google Cloud: [free features](https://cloud.google.com/free/docs/free-cloud-features) · [Cloud Run pricing](https://cloud.google.com/run/pricing)
+- Fallback B: [Render free tier](https://render.com/docs/free) · [Render pricing](https://render.com/pricing) · [Fly.io pricing](https://fly.io/docs/about/pricing/) · [Railway pricing](https://railway.com/pricing) · [Neon pricing](https://neon.com/pricing) · [Neon plans](https://neon.com/docs/introduction/plans) · [Grafana Cloud pricing](https://grafana.com/pricing/)
 
 ## 7. Architecture decision records
 
@@ -175,7 +195,7 @@ Each ADR: context → decision → consequences. New ADRs are appended here by P
 ### ADR-009 Bounded responder: deterministic rollback + investigation agent (Accepted with limits — decision D4)
 - **Context:** The course scores an on-call agent that "wakes up on an alert and fixes the issue", and its DevOps module separates evidence, reasoning, permission and verification: a model supplies confidence, and code outside the model enforces permission.
 - **Decision:** Two layers. (1) The responder service follows a fixed runbook and may take at most one automatic action per incident: roll back to the previous good release under the rules in operations.md §6.1. No model is involved. (2) An investigation agent (headless coding agent, decision D4) runs in an isolated GitHub Actions job on the live SHA, from a read-only, allowlisted evidence packet. It classifies the incident and, for a code defect, opens a PR with a failing-then-passing test. Its output is schema-checked and its PR is path- and size-limited; merging always needs the Lead.
-- **Limits set by the Lead (D4):** the model ID is pinned in the workflow file and changes only by PR. The API key belongs to a dedicated workspace with a hard monthly spend limit and is stored only as a `responder` environment secret. The agent starts in **report-only** mode (findings posted to the incident issue, no branch or PR), and PR mode is enabled by the Lead only after the drill works. It never merges, deploys or sees production secrets.
+- **Limits set by the Lead (D4):** the model ID is pinned in the workflow file (`claude-sonnet-5-5`, with `claude-opus-5-5` as the upgrade if the drill shows weak investigations) and changes only by PR. The API key belongs to a dedicated workspace with a hard monthly spend limit and is stored only as a `responder` environment secret. The agent starts in **report-only** mode (findings posted to the incident issue, no branch or PR), and PR mode is enabled by the Lead only after the drill works. It never merges, deploys or sees production secrets.
 - **Consequences:** Service recovery never depends on a model. Hitting the spend limit only stops the investigation; the rollback still runs. The permanent fix is proposed automatically, once PR mode is on, but reviewed like any other PR. More moving parts (one extra workflow and a model API key), all unit-tested except the model call. Details in [operations.md §6](operations.md#6-responder-agent).
 
 ### ADR-010 OpenTelemetry with the Grafana stack (Accepted — decision D3)
@@ -192,5 +212,5 @@ Each ADR: context → decision → consequences. New ADRs are appended here by P
 
 ### ADR-013 One VM with Docker Compose for dev and prod (Accepted — decision D2)
 - **Context:** The app, both environments, the Grafana stack, the responder and the probe all need to run somewhere that is cheap, reproducible from the repository, and close to the local setup.
-- **Decision:** One small Linux VM (at least 2 vCPU, 4 GB RAM, 40 GB disk). Dev and prod are two Compose projects with separate databases and volumes, on two subdomains behind one reverse proxy with automatic HTTPS. The Grafana stack, responder and probe run on the same VM on an internal network. GitHub Actions deploys over SSH. Fallback: option B (hosted platform + managed PostgreSQL + hosted telemetry).
+- **Decision:** One small Linux VM (at least 2 vCPU, 4 GB RAM, 40 GB disk): **AWS Lightsail, 4 GB bundle** (2 vCPU, 4 GB, 80 GB SSD, 4 TB transfer, US$24/month), chosen from the price check in §6.1. Dev and prod are two Compose projects with separate databases and volumes, on two subdomains behind one reverse proxy with automatic HTTPS. The Grafana stack, responder and probe run on the same VM on an internal network. GitHub Actions deploys over SSH. Fallback: option B (hosted platform + managed PostgreSQL + hosted telemetry).
 - **Consequences:** Local and deployed setups use the same Compose files; telemetry never leaves the VM. One VM is a single point of failure for both environments (accepted for a demo). The Lead patches the OS and keeps the SSH key only in the `dev`/`production` environment secrets.

@@ -7,7 +7,7 @@ MediTrack is built by one human lead and a small team of AI agents. Each agent h
 | Role | Who | Responsibilities | Owns (write access) |
 |---|---|---|---|
 | **Lead** | Brave (human) | Approves requirements, contract and backlog; assigns tasks; approves and merges PRs; approves production deploys; holds all secrets | Everything; final say |
-| **Spec agent** | AI session (planning) | Drafts and maintains specs, ADRs and backlog tasks; reviews contract-change requests; keeps docs consistent | `docs/**`, `api/openapi.yaml`, `backlog/**`, `scripts/create_backlog.py`, `scripts/render_backlog.py`, `scripts/check_docs.py`, `AGENTS.md`, `CLAUDE.md`, `README.md` — **by PR, Lead approves** |
+| **Spec agent** | AI session (planning) | Drafts and maintains specs, ADRs and backlog tasks; reviews contract-change requests; keeps docs consistent | `docs/**`, `prompts/**`, `api/openapi.yaml`, `backlog/**`, `scripts/create_backlog.py`, `scripts/render_backlog.py`, `scripts/check_docs.py`, `AGENTS.md`, `CLAUDE.md`, `README.md` — **by PR, Lead approves** |
 | **Frontend agent** | AI coding session | Builds the React app against the contract; frontend unit/component tests; frontend Dockerfile and its nginx config | `frontend/**` |
 | **Backend agent** | AI coding session | Builds the FastAPI app, domain rules, database, migrations, backend tests, backend telemetry; backend Dockerfile | `backend/**` |
 | **Reviewer agent** | Fresh AI session with **no** shared context with the author | Reviews each PR against its task's acceptance criteria and the rules in AGENTS.md; read-only | None (comments only) |
@@ -15,7 +15,9 @@ MediTrack is built by one human lead and a small team of AI agents. Each agent h
 | **Platform agent** *(phase 2)* | AI coding session | Docker Compose, Makefile, CI/CD workflows, nginx, observability config, alert rules | `docker-compose*.yml`, `Makefile`, `.github/workflows/**`, `deploy/**`, `probe/**`, `responder/**`, `scripts/**` (except the three spec scripts owned by the Spec agent) |
 | **Responder agent** *(phase 3, runtime)* | Automated service in production | Reacts to the user-impact alert using the runbook; one bounded action | None — built by the Platform agent; at runtime it writes nothing to the repo (only issues/comments) |
 
-Ready-to-use prompts: [prompts/frontend-agent.md](../prompts/frontend-agent.md), [prompts/backend-agent.md](../prompts/backend-agent.md), [prompts/reviewer-agent.md](../prompts/reviewer-agent.md), [prompts/test-agent.md](../prompts/test-agent.md).
+Excellence editions, used for MT-020 and for MT-011 onwards on top of the base prompts (quality bar, Phase A design note, self-review loop): [prompts/frontend-agent-excellence.md](../prompts/frontend-agent-excellence.md), [prompts/backend-agent-excellence.md](../prompts/backend-agent-excellence.md).
+
+Ready-to-use base prompts: [prompts/frontend-agent.md](../prompts/frontend-agent.md), [prompts/backend-agent.md](../prompts/backend-agent.md), [prompts/reviewer-agent.md](../prompts/reviewer-agent.md), [prompts/test-agent.md](../prompts/test-agent.md).
 
 ## 2. File ownership rules
 

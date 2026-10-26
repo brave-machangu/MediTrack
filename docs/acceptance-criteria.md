@@ -69,5 +69,6 @@ Unless stated otherwise, examples use a patient in `Africa/Harare` (UTC+2, no DS
 | AC-39 | FR-04 | Property-based test over random IANA timezones, dates from 2000 to 2040 and schedule times: no schedule ever produces two planned doses with the same `scheduled_for`, and every local time that exists on that date converts back to itself. | Unit |
 | AC-40 | FR-13 | Every page shows the demo banner text from FR-13, and it is reachable by screen readers (landmark or `role="note"`). | Frontend |
 | AC-41 | FR-14 | `python -m app.seed --reset` replaces all patients, medications, schedules and dose logs with the synthetic seed in one transaction: after it runs, row counts equal the seed's, no earlier row remains, and a failure part-way leaves the previous data intact. Running it twice gives the same result. | Integration |
+| AC-42 | FR-09 | `adherence_percent` rounds half-up: 1 taken + 15 missed → `6.3` (not `6.2`); 2 taken + 1 skipped → `66.7`. | Unit |
 
 Operational criteria (deployment, CI/CD, alerting, responder agent) are in [operations.md](operations.md#8-operational-acceptance-criteria).
