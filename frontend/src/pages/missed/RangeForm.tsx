@@ -10,7 +10,7 @@ import { rangeErrors, type RangeErrors } from './range'
 import styles from './missed.module.css'
 
 type Props = {
-  /** The dates to start with: the range on screen, once the patient's today is known. */
+  /** The range on screen, once the patient's today is known. A field shows it until someone changes that field. */
   initial: DateRange | undefined
   /** The server's refusal of the last range shown, with a key that changes on each refusal. */
   serverErrors: { key: number; errors: RangeErrors } | null
@@ -20,7 +20,9 @@ type Props = {
 /** "Dates" with From and To (DESIGN.md §6.7). The server isn't asked until both dates pass its rules. */
 export function RangeForm({ initial, serverErrors, onShow }: Props) {
   const id = useId()
-  const [values, setValues] = useState<DateRange>(initial ?? { from: '', to: '' })
+  // Only what was typed, so a field nobody touched still fills in when the patient's today arrives late.
+  const [typed, setTyped] = useState<Partial<DateRange>>({})
+  const values: DateRange = { from: typed.from ?? initial?.from ?? '', to: typed.to ?? initial?.to ?? '' }
   const [checked, setChecked] = useState<{ attempt: number; errors: RangeErrors } | null>(null)
   const errors = checked?.errors ?? serverErrors?.errors ?? {}
   const fromId = `${id}-from`
@@ -57,7 +59,7 @@ export function RangeForm({ initial, serverErrors, onShow }: Props) {
           value={values.from}
           className={fieldStyles.short}
           onChange={(event) => {
-            setValues({ ...values, from: event.target.value })
+            setTyped({ ...typed, from: event.target.value })
           }}
         />
         <TextField
@@ -68,7 +70,7 @@ export function RangeForm({ initial, serverErrors, onShow }: Props) {
           value={values.to}
           className={fieldStyles.short}
           onChange={(event) => {
-            setValues({ ...values, to: event.target.value })
+            setTyped({ ...typed, to: event.target.value })
           }}
         />
       </Fieldset>

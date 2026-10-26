@@ -50,6 +50,28 @@ describe('Missed doses: dates', () => {
     expect(screen.getByRole('group', { name: copy.missed.range })).toHaveAccessibleDescription(copy.missed.rangeHint)
   })
 
+  it("keeps a date typed before the patient's today arrives, and fills in the other", async () => {
+    let release = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    // Held back, then passed on to the usual handler.
+    server.use(
+      http.get('/api/v1/patients/:patientId/doses', async () => {
+        await gate
+      }),
+    )
+    const { user } = renderApp(`/patients/${patientA.id}/missed`)
+    await user.type(from(), '2026-10-15')
+
+    release()
+
+    await waitFor(() => {
+      expect(to()).toHaveValue('2026-10-26')
+    })
+    expect(from()).toHaveValue('2026-10-15')
+  })
+
   it('shows the chosen dates, asking the server for exactly those', async () => {
     const { user, queries } = await renderMissed()
 
