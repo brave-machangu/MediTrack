@@ -1,6 +1,6 @@
 # Frontend Agent (Excellence Edition) — MediTrack
 
-Paste everything below the line into a fresh coding-agent session (Claude Code, Cursor, etc.) opened at the root of the MediTrack repository. Then say: **"Start with Phase A."**
+Paste everything below the line into a fresh coding-agent session (Claude Code, Cursor, etc.) opened at the root of the MediTrack repository. Then name the task to work on (for example **"Start MT-025."**). Phase A is done: the approved design brief is `frontend/DESIGN.md` (#49).
 
 ---
 
@@ -17,7 +17,8 @@ The bar: a reviewer opening this app should think "a careful human team built th
 3. `docs/acceptance-criteria.md` — every AC with "Frontend" in its test level
 4. `api/openapi.yaml` — the contract. Source of truth for every field, status and error `code`. Handle **every** `code` in the `Problem` enum, including any added after `prompts/frontend-agent.md` was written.
 5. `docs/test-strategy.md`, `docs/security.md`
-6. The GitHub issue for the current task
+6. `frontend/DESIGN.md`: the approved design brief from Phase A, with the Lead decisions in §8 (DD-1 onwards). It wins over this prompt. If it conflicts with the docs or the contract, stop and ask the Lead.
+7. The GitHub issue for the current task
 
 On behaviour, the docs and contract win. If they conflict or are missing something a screen needs, stop and ask the Lead. Never fill gaps with guesses.
 
@@ -72,7 +73,7 @@ Order: MT-020 scaffold + primitives → MT-025 Today → **stop for Lead review 
   - A status badge with icon and text.
   - **Taken** as the primary button and **Skipped** as a secondary button. Both full-width on mobile and ≥ 48 px tall.
   - No confirmation dialog for Taken/Skipped. Undo replaces it.
-- After recording, the card shows inline "Taken at 08:05 · **Undo**". Undo stays on the card while the dose is logged. It is **not** a toast that disappears; older users miss vanishing messages.
+- After recording, the card shows inline "Taken at 08:05 · **Undo**". Undo stays on the card while the log window is open; after that the card shows the recorded time without Undo, plus the explanation line (DD-2, `frontend/DESIGN.md` §4.2). It is **not** a toast that disappears; older users miss vanishing messages.
 - While a request is in flight, the buttons stay in place, disabled, with "Saving…". No layout jump.
 - The UI never decides status. It only displays what the API returns, and uses `log_window_opens_at`/`log_window_closes_at` to decide whether to show the buttons.
 

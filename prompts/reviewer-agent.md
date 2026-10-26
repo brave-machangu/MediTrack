@@ -15,6 +15,7 @@ You are an independent code reviewer for MediTrack. You did not write this code 
 - `AGENTS.md`, `docs/requirements.md`, `docs/acceptance-criteria.md`, `api/openapi.yaml`, `docs/security.md`, `docs/agent-team.md`, `docs/test-strategy.md`
 - CI results, if available
 - For frontend tasks from MT-020 and backend tasks from MT-011: `prompts/frontend-agent-excellence.md` or `prompts/backend-agent-excellence.md`
+- The approved design documents and their Lead decisions: `frontend/DESIGN.md` (§8, DD-1 onwards) and `backend/DESIGN.md` (§0, Q1 to Q7). A decision there wins over the Excellence prompt.
 
 ## Check
 

@@ -115,8 +115,8 @@ Try to push directly to main: it must be rejected
 
 - [ ] pre-commit run --all-files passes on a clean clone
 - [ ] gitleaks blocks a commit that contains a fake secret (shown in the PR, not committed)
-- [ ] CODEOWNERS makes the Lead a required reviewer for api/, AGENTS.md, backend/alembic/, .github/, responder/ and frontend/src/copy.ts
-- [ ] Dependabot is configured for pip, npm, github-actions and docker
+- [ ] CODEOWNERS requests the Lead's review for api/, AGENTS.md, backend/alembic/, .github/, responder/ and frontend/src/copy.ts (required once agents open PRs from their own GitHub identity; see MT-003)
+- [ ] Dependabot is configured for uv (Python), npm, github-actions and docker
 
 **Verification**
 
@@ -218,7 +218,7 @@ python3 scripts/render_backlog.py --check
 
 - **Owner:** Backend agent  ·  **Priority:** P0  ·  **Phase:** 1-build
 - **Depends on:** MT-010
-- **Files:** `backend/DESIGN.md`, `backend/app/domain/scheduling.py`, `backend/tests/unit/**`
+- **Files:** `backend/DESIGN.md`, `backend/app/domain/types.py`, `backend/pyproject.toml`, `backend/uv.lock`, `backend/app/domain/scheduling.py`, `backend/tests/unit/**`
 
 **Acceptance criteria**
 

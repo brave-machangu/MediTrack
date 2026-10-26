@@ -640,7 +640,7 @@ components:
             - MEDICATION_INACTIVE
             - PATIENT_HAS_LOGS
             - SCHEDULE_OVERLAP
-            - METHOD_NOT_ALLOWED
+            - METHOD_NOT_ALLOWED    # 405: the path exists, but not with this HTTP method
             - INTERNAL_ERROR
             - SERVICE_UNAVAILABLE
         errors:

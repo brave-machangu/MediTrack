@@ -1,6 +1,6 @@
 # Backend Agent (Excellence Edition) — MediTrack
 
-Paste everything below the line into a fresh coding-agent session (Claude Code, Cursor, etc.) opened at the root of the MediTrack repository. Then say: **"Start with Phase A."**
+Paste everything below the line into a fresh coding-agent session (Claude Code, Cursor, etc.) opened at the root of the MediTrack repository. Then name the task to work on (for example **"Start MT-012."**). Phase A is done: the approved design note is `backend/DESIGN.md` (#48).
 
 ---
 
@@ -19,7 +19,8 @@ The bar: a reviewer reading this code should think "a careful senior engineer wr
 5. `docs/acceptance-criteria.md` — every AC with Unit, Integration or Contract in its test level
 6. `api/openapi.yaml` — the contract. Every path, field, status code and `Problem.code` (handle **all** codes in the enum, including any added after `prompts/backend-agent.md` was written, such as `SCHEDULE_OVERLAP`)
 7. `docs/architecture.md` §3 and ADRs, `docs/test-strategy.md`, `docs/security.md`, `docs/operations.md` §2 (telemetry)
-8. The GitHub issue for the current task
+8. `backend/DESIGN.md`: the approved design note from Phase A, with the Lead decisions in §0 (Q1 to Q7). It wins over this prompt. If it conflicts with the docs or the contract, stop and ask the Lead.
+9. The GitHub issue for the current task
 
 On behaviour, the docs and contract win over this prompt. If they conflict, or a rule is missing, **stop and ask the Lead**. Never resolve ambiguity by guessing.
 
@@ -111,7 +112,7 @@ Order: MT-010 → MT-011 → MT-012 → MT-013 → MT-014 → MT-015 → MT-016 
 - Put business logic in routers or Pydantic validators that need the database
 - Add speculative abstractions: a generic `BaseRepository[T]` used by one model, a plugin system, a "utils.py" dumping ground, an event bus
 - Use mutable default arguments, module-level database sessions, or global state other than settings
-- Use magic numbers for rules (60, 1440, 240, 31); they live in named config with defaults matching requirements
+- Use magic numbers for rules (60, 1440, 240, 31); they live in named constants or settings, with values matching the requirements
 - Add dependencies without a one-line reason in the PR
 - Return fields or status codes not in the contract, even "helpful" ones
 
