@@ -298,7 +298,7 @@ export interface components {
              */
             version?: string;
         };
-        /** @description RFC 9457-style error body. Never contains medication names or personal data. */
+        /** @description RFC 9457-style error body. Never contains medication names or personal data. A request with an HTTP method the path doesn't support returns 405 with `code: METHOD_NOT_ALLOWED` and an `Allow` header listing the permitted methods (RFC 9110 §15.5.6). */
         Problem: {
             /** @default about:blank */
             type: string;
@@ -308,7 +308,7 @@ export interface components {
             status: number;
             detail?: string;
             /** @enum {string} */
-            code: "VALIDATION_ERROR" | "NOT_FOUND" | "DUPLICATE_DOSE_LOG" | "DOSE_NOT_PLANNED" | "OUTSIDE_LOG_WINDOW" | "SCHEDULE_HAS_LOGS" | "MEDICATION_INACTIVE" | "PATIENT_HAS_LOGS" | "SCHEDULE_OVERLAP" | "INTERNAL_ERROR" | "SERVICE_UNAVAILABLE";
+            code: "VALIDATION_ERROR" | "NOT_FOUND" | "DUPLICATE_DOSE_LOG" | "DOSE_NOT_PLANNED" | "OUTSIDE_LOG_WINDOW" | "SCHEDULE_HAS_LOGS" | "MEDICATION_INACTIVE" | "PATIENT_HAS_LOGS" | "SCHEDULE_OVERLAP" | "METHOD_NOT_ALLOWED" | "INTERNAL_ERROR" | "SERVICE_UNAVAILABLE";
             /** @description Field-level validation errors (VALIDATION_ERROR only) */
             errors?: {
                 /** @example times_of_day[0] */

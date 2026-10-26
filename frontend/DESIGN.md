@@ -157,7 +157,7 @@ No confirmation dialog for Taken, Skipped or Undo. Undo is the safety net. There
 
 ### 4.5 Errors
 
-- Every API error is mapped from `code` to the copy in [§7.3](#73-api-errors). All 11 codes in the contract's `Problem` enum are covered, plus network error, timeout and an unknown-code fallback.
+- Every API error is mapped from `code` to the copy in [§7.3](#73-api-errors). All 12 codes in the contract's `Problem` enum are covered, plus network error, timeout and an unknown-code fallback.
 - **Where errors appear.** A page that can't load shows an ErrorState. A form shows an error summary plus messages next to its fields. A dose action shows the error on its card.
 - Every server error shows "Support reference: {trace ID}", taken from the `X-Trace-Id` header, or from `trace_id` in the body if the header is missing. Network errors have no reference. The trace ID is logged to the console only in development builds.
 
@@ -926,6 +926,7 @@ Words used: dose, medication, schedule, taken, skipped, missed, record. Words ne
 | `error.SERVICE_UNAVAILABLE` | MediTrack is temporarily unavailable. Please try again in a moment. | With Retry |
 | `error.NOT_FOUND` | We couldn't find that. It may have been removed. | |
 | `error.INTERNAL_ERROR` | Something went wrong. Please try again. | Also any unknown code |
+| `METHOD_NOT_ALLOWED` → `error.INTERNAL_ERROR` | Something went wrong. Please try again. | 405, added to the contract by #47. No copy of its own: the UI never sends an unsupported method, so only a bug can cause it (`prompts/frontend-agent.md`) |
 | `error.network` | MediTrack couldn't be reached. Check your internet connection and try again. | No response |
 | `error.timeout` | MediTrack is taking too long to respond. Please try again. | Client timeout |
 | `dose.notRecorded` | Not recorded. | Put before the message on a dose card, for any failed Taken / Skipped |
