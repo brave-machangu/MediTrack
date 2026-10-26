@@ -1,0 +1,78 @@
+.button {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  min-width: var(--target-min);
+  min-height: var(--target-min);
+  padding: var(--space-2) var(--space-5);
+  border: var(--border-input) solid transparent;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h2);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.button svg {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.primary {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.primary:hover {
+  background: var(--color-accent-strong);
+  color: var(--color-bg);
+}
+
+.secondary {
+  border-color: var(--color-accent);
+  background: var(--color-bg);
+  color: var(--color-accent);
+}
+
+.secondary:hover {
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-strong);
+}
+
+/* Looks like a link, keeps a full-size target. */
+.quiet {
+  padding-inline: var(--space-2);
+  background: transparent;
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.quiet:hover {
+  color: var(--color-accent-strong);
+  text-decoration-thickness: 2px;
+}
+
+.danger {
+  background: var(--color-danger);
+  color: var(--color-bg);
+}
+
+.danger:hover {
+  background: var(--color-danger-strong);
+  color: var(--color-bg);
+}
+
+/* Busy (e.g. "Saving…") keeps full contrast so the label stays readable. */
+.button:disabled {
+  cursor: progress;
+}

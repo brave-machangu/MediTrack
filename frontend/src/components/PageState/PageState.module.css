@@ -1,0 +1,21 @@
+.loading {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.placeholder {
+  height: 7rem;
+  border-radius: var(--radius-panel);
+  background: var(--color-neutral-subtle);
+}
+
+.empty {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+/* A 32-character trace ID must wrap on a 320 px screen. */
+.reference {
+  overflow-wrap: anywhere;
+}

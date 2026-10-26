@@ -20,7 +20,14 @@ export function usePatient(patientId: string | undefined) {
   })
 }
 
+/** The `:patientId` of a patient page; those pages only render under `/patients/:patientId`. */
+export function usePatientId(): string {
+  const { patientId } = useParams()
+  if (patientId === undefined) throw new Error('Patient pages need a :patientId route parameter')
+  return patientId
+}
+
 /** The patient named in the current URL (`/patients/:patientId/...`). */
 export function useCurrentPatient() {
-  return usePatient(useParams().patientId)
+  return usePatient(usePatientId())
 }

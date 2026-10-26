@@ -1,0 +1,93 @@
+/* Narrow screens: time and badge on one row, details below. Wide: time | details | badge. */
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'time badge'
+    'body body'
+    'actions actions';
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-4);
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-bg);
+}
+
+.time {
+  grid-area: time;
+  font-size: var(--font-size-time);
+  line-height: var(--line-height-time);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  grid-area: badge;
+  align-self: center;
+  justify-self: end;
+}
+
+.body {
+  grid-area: body;
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.name {
+  overflow-wrap: anywhere;
+}
+
+.note {
+  color: var(--color-text-secondary);
+}
+
+.actions {
+  grid-area: actions;
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Taken and Skipped: full width and stacked on narrow screens, 12 px apart to avoid mis-taps. */
+.buttons {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.doseButton {
+  width: 100%;
+  min-height: var(--target-dose);
+}
+
+.result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+}
+
+@media (min-width: 37.5em) {
+  .card {
+    grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+    grid-template-areas:
+      'time body badge'
+      'time actions actions';
+    /* Time, medication name and badge share a first baseline, despite their different sizes. */
+    align-items: baseline;
+  }
+
+  .badge {
+    align-self: baseline;
+  }
+
+  .buttons {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .doseButton {
+    width: auto;
+    min-width: 8.5rem;
+  }
+}
