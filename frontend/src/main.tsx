@@ -8,7 +8,7 @@ async function startMockApi() {
   // `npm run dev:mock` runs the app against synthetic data; the check is false in builds, so the mocks are left out.
   if (import.meta.env.MODE !== 'mock') return
   const { startMockWorker } = await import('./mocks/browser')
-  await startMockWorker()
+  await startMockWorker(new URLSearchParams(window.location.search).get('mock'))
 }
 
 const container = document.getElementById('root')

@@ -8,31 +8,13 @@ import { dayOf, json } from '../../mocks/handlers'
 import { server } from '../../mocks/server'
 import { seriousAxeViolations } from '../../test/axe'
 import { renderApp } from '../../test/renderApp'
+import { cardIn, namesIn, setClock } from './todayTestHelpers'
 
 const { group } = copy.today
-
-function setClock(instant: string) {
-  // Only Date is faked, so MSW and Testing Library timers keep working.
-  vi.useFakeTimers({ toFake: ['Date'] })
-  vi.setSystemTime(new Date(instant))
-}
 
 async function renderToday(patientId = patientA.id) {
   renderApp(`/patients/${patientId}/today`)
   await screen.findByRole('heading', { level: 1, name: /^Today, / })
-}
-
-function namesIn(groupName: string): (string | null)[] {
-  const list = screen.getByRole('list', { name: groupName })
-  return within(list)
-    .getAllByRole('heading', { level: 3 })
-    .map((heading) => heading.textContent)
-}
-
-function cardIn(groupName: string, index: number): HTMLElement {
-  const card = within(screen.getByRole('list', { name: groupName })).getAllByRole('article')[index]
-  if (card === undefined) throw new Error(`no card ${String(index)} in ${groupName}`)
-  return card
 }
 
 function serveDay(patient: typeof patientA, doses: PlannedDose[]) {
