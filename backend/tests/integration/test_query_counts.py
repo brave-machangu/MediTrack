@@ -70,3 +70,20 @@ def test_day_view_statement_count_is_constant(
     assert len(response.json()["doses"]) == medications
     # patient, schedules joined with their medications, dose logs of the planned instants
     assert len(statements) == 3, statements
+
+
+@pytest.mark.parametrize("medications", [1, 4])
+@pytest.mark.parametrize(
+    "path", ["missed-doses?from=2026-11-02&to=2026-11-08", "adherence/daily?date=2026-11-02"]
+)
+def test_report_statement_count_is_constant(
+    api: TestClient, engine: Engine, medications: int, path: str
+) -> None:
+    patient_id = patient_with_medications(api, engine, medications)
+
+    with count_statements(api) as statements:
+        response = api.get(f"{PATIENTS}/{patient_id}/{path}")
+
+    assert response.status_code == 200
+    # patient, schedules joined with their medications, dose logs (DESIGN.md §5)
+    assert len(statements) == 3, statements

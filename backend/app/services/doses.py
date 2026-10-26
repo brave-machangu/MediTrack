@@ -22,7 +22,12 @@ from app.db.repositories import (
     violates_unique,
 )
 from app.domain.errors import DuplicateDoseLog, NotFound
-from app.domain.scheduling import check_can_log, is_late, local_today, planned_doses
+from app.domain.scheduling import (
+    check_can_log,
+    is_late,
+    local_today,
+    planned_doses_between,
+)
 from app.domain.types import DoseRules, LoggedDose, LogStatus, PlannedDose, ScheduleRule
 
 ONE_DAY = timedelta(days=1)
@@ -48,26 +53,40 @@ def day_view(
     """The patient's planned doses for a local date; by default the patient's own today (AC-09)."""
     now = clock.now()
     with session.begin():
-        patient = session.get(Patient, patient_id)
-        if patient is None:
-            raise NotFound
-        tz = ZoneInfo(patient.timezone)
-        day = local_date or local_today(now, tz)
-        # A dose on `day` can come from the previous configured date (DESIGN.md Q1).
-        rows = schedules_of_patient(session, patient_id, day - ONE_DAY, day)
-        schedules = [schedule_rule(schedule, medication) for schedule, medication in rows]
-        # Plan once to learn which instants to fetch logs for, then again with the logs.
-        unlogged = planned_doses(schedules, [], tz, day, now, rules)
-        logs: list[LoggedDose] = []
-        if unlogged:
-            stored = dose_logs_between(
-                session,
-                [schedule.schedule_id for schedule in schedules],
-                unlogged[0].scheduled_for,
-                unlogged[-1].scheduled_for,
-            )
-            logs = [logged_dose(log) for log in stored]
-        doses = planned_doses(schedules, logs, tz, day, now, rules)
+        patient = load_patient(session, patient_id)
+        day = local_date or local_today(now, ZoneInfo(patient.timezone))
+        doses = plan_between(session, patient, day, day, now, rules)
+    return DayView(patient, day, now, doses)
+
+
+def load_patient(session: Session, patient_id: UUID) -> Patient:
+    patient = session.get(Patient, patient_id)
+    if patient is None:
+        raise NotFound
+    return patient
+
+
+def plan_between(
+    session: Session, patient: Patient, first: date, last: date, now: datetime, rules: DoseRules
+) -> list[DoseView]:
+    """The patient's planned doses from local date `first` to `last`, ordered by time, then
+    medication name. Two statements, however many medications or dates."""
+    tz = ZoneInfo(patient.timezone)
+    # A dose on `first` can come from the previous configured date (DESIGN.md Q1).
+    rows = schedules_of_patient(session, patient.id, first - ONE_DAY, last)
+    schedules = [schedule_rule(schedule, medication) for schedule, medication in rows]
+    # Plan once to learn which instants to fetch logs for, then again with the logs.
+    unlogged = planned_doses_between(schedules, [], tz, first, last, now, rules)
+    logs: list[LoggedDose] = []
+    if unlogged:
+        stored = dose_logs_between(
+            session,
+            [schedule.schedule_id for schedule in schedules],
+            min(dose.scheduled_for for dose in unlogged),
+            max(dose.scheduled_for for dose in unlogged),
+        )
+        logs = [logged_dose(log) for log in stored]
+    doses = planned_doses_between(schedules, logs, tz, first, last, now, rules)
     medications = {schedule.id: medication for schedule, medication in rows}
     views = [DoseView(dose, medications[dose.schedule_id]) for dose in doses]
     views.sort(
@@ -78,7 +97,7 @@ def day_view(
             view.dose.schedule_id,
         )
     )
-    return DayView(patient, day, now, views)
+    return views
 
 
 def create_dose_log(

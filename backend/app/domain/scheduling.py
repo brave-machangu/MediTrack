@@ -5,12 +5,12 @@ Pure functions. Instants are timezone-aware UTC datetimes and `now` is always pa
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from app.domain.errors import DoseNotPlanned, MedicationInactive, OutsideLogWindow
+from app.domain.errors import DoseNotPlanned, InvalidField, MedicationInactive, OutsideLogWindow
 from app.domain.types import (
     DoseRules,
     DoseStatus,
@@ -21,6 +21,9 @@ from app.domain.types import (
 )
 
 ONE_DAY = timedelta(days=1)
+# Fixed by api/openapi.yaml (listMissedDoses), so not configurable.
+MISSED_RANGE_MAX_DAYS = 31
+MISSED_RANGE_DEFAULT_DAYS = 7
 
 
 def local_today(now: datetime, tz: ZoneInfo) -> date:
@@ -160,3 +163,25 @@ def _scheduled_on(schedule: ScheduleRule, configured_date: date) -> bool:
 
 def _by_instant(dose: PlannedDose) -> tuple[datetime, UUID]:
     return dose.scheduled_for, dose.schedule_id
+
+
+def missed_range(start: date | None, end: date | None, today: date) -> tuple[date, date]:
+    """The local dates to list missed doses for (FR-08, AC-22, AC-23), both inclusive.
+
+    The defaults come from the contract, both relative to today: `from` is six days before
+    today and `to` is today. At most 31 days, and `from` must not be after `to`.
+    """
+    first = start or today - timedelta(days=MISSED_RANGE_DEFAULT_DAYS - 1)
+    last = end or today
+    if first > last:
+        raise InvalidField("from", "must be on or before to")
+    if (last - first).days >= MISSED_RANGE_MAX_DAYS:
+        raise InvalidField("to", f"the range may cover at most {MISSED_RANGE_MAX_DAYS} days")
+    return first, last
+
+
+def missed_doses(doses: Iterable[PlannedDose]) -> list[PlannedDose]:
+    """Doses that are missed right now (unlogged and past their grace), newest first."""
+    missed = [dose for dose in doses if dose.status == DoseStatus.MISSED]
+    missed.sort(key=lambda dose: (-dose.scheduled_for.timestamp(), dose.schedule_id))
+    return missed

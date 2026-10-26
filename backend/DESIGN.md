@@ -341,8 +341,8 @@ The contract fixes some numbers, so they are named constants in `app/config.py`,
 
 - `GRACE_PERIOD_DEFAULT_MINUTES = 60`
 - `GRACE_PERIOD_MAX_MINUTES = 240`
-- `MISSED_RANGE_MAX_DAYS = 31`
-- `MISSED_RANGE_DEFAULT_DAYS = 7`
+- `MISSED_RANGE_MAX_DAYS = 31` (in `app/domain/scheduling.py`, next to the rule, so the domain needs no settings import)
+- `MISSED_RANGE_DEFAULT_DAYS = 7` (same place)
 
 ## 7. Test plan
 
