@@ -4,7 +4,7 @@ import { MedicationsPage } from './pages/medications/MedicationsPage'
 import { MissedPage } from './pages/missed/MissedPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { PatientsPage } from './pages/patients/PatientsPage'
-import { SummaryPage } from './pages/SummaryPage'
+import { SummaryPage } from './pages/summary/SummaryPage'
 import { TodayPage } from './pages/today/TodayPage'
 
 export const routes: RouteObject[] = [

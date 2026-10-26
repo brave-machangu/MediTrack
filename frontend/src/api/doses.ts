@@ -6,6 +6,7 @@ export type PlannedDose = components['schemas']['PlannedDose']
 type DayDoses = components['schemas']['DayDoses']
 export type DoseLog = components['schemas']['DoseLog']
 export type DoseLogCreate = components['schemas']['DoseLogCreate']
+export type DailyAdherence = components['schemas']['DailyAdherence']
 
 /** Today, Missed doses and Daily summary keys all start with this, so one invalidation refreshes them together. */
 const doseDataKey = (patientId: string) => ['dose-data', patientId] as const
@@ -42,6 +43,15 @@ export function useMissedDoses(patientId: string, range: DateRange | undefined) 
   return useQuery({
     queryKey: [...missedKey(patientId), range ?? 'last-7-days'],
     queryFn: () => request<PlannedDose[]>(`/api/v1/patients/${encodeURIComponent(patientId)}/missed-doses${query}`),
+  })
+}
+
+/** One patient-local date's counts and adherence. Without a date, the server uses the patient's today. */
+export function useDailySummary(patientId: string, date: string | undefined) {
+  const query = date === undefined ? '' : `?${new URLSearchParams({ date }).toString()}`
+  return useQuery({
+    queryKey: [...doseDataKey(patientId), 'summary', date ?? 'today'],
+    queryFn: () => request<DailyAdherence>(`/api/v1/patients/${encodeURIComponent(patientId)}/adherence/daily${query}`),
   })
 }
 

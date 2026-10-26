@@ -20,6 +20,7 @@ import {
   withLog,
 } from './data'
 
+type DailyAdherence = components['schemas']['DailyAdherence']
 type DoseLog = components['schemas']['DoseLog']
 type DoseLogCreate = components['schemas']['DoseLogCreate']
 type Medication = components['schemas']['Medication']
@@ -193,6 +194,39 @@ function rangeProblems(from: string, to: string) {
   return []
 }
 
+/**
+ * GET /adherence/daily as the backend computes it (AC-25, AC-26, AC-42). Demo Patient A's today comes from the
+ * mock day; earlier days plan five doses, each taken unless it's one of the mock's missed doses; later days
+ * repeat today's plan with nothing recorded yet.
+ */
+function summaryOf(patient: Patient, date: string): DailyAdherence {
+  const counts = { planned: 0, taken: 0, taken_late: 0, skipped: 0, missed: 0, pending: 0 }
+  if (patient.id === patientA.id && date === MOCK_DATE) {
+    for (const dose of dayA()) {
+      counts.planned += 1
+      if (dose.status === 'taken') counts.taken += 1
+      if (dose.status === 'taken' && dose.late) counts.taken_late += 1
+      if (dose.status === 'skipped') counts.skipped += 1
+      if (dose.status === 'missed') counts.missed += 1
+      if (dose.status === 'upcoming' || dose.status === 'due') counts.pending += 1
+    }
+  } else if (patient.id === patientA.id && date < MOCK_DATE) {
+    const records = pastMissedA.filter((dose) => dose.local_date === date).map((dose) => logs.find((log) => isLogFor(log, dose)))
+    counts.planned = 5
+    counts.missed = records.filter((log) => log === undefined).length
+    counts.skipped = records.filter((log) => log?.status === 'skipped').length
+    counts.taken_late = records.filter((log) => log?.status === 'taken').length
+    counts.taken = counts.planned - counts.missed - counts.skipped
+  } else if (patient.id === patientA.id) {
+    counts.planned = plannedA.length
+    counts.pending = plannedA.length
+  }
+  const scored = counts.taken + counts.skipped + counts.missed
+  // Half-up to one decimal place: 1 taken of 16 is 6.25, shown as 6.3 (AC-42).
+  const adherence = scored === 0 ? null : Math.round((counts.taken / scored) * 1000) / 10
+  return { patient_id: patient.id, date, timezone: patient.timezone, ...counts, adherence_percent: adherence }
+}
+
 const findPatient = (id: unknown) => patientList.find((patient) => patient.id === id)
 const patientNotFound = () => problem(404, 'NOT_FOUND', 'Patient not found')
 
@@ -238,6 +272,13 @@ export const handlers = [
     if (errors.length > 0) return validationProblem(errors)
     const own = patient.id === patientA.id ? missedA() : []
     return json(own.filter((dose) => from <= dose.local_date && dose.local_date <= to))
+  }),
+  http.get('/api/v1/patients/:patientId/adherence/daily', ({ params, request }) => {
+    const patient = findPatient(params.patientId)
+    if (patient === undefined) return patientNotFound()
+    const date = new URL(request.url).searchParams.get('date') ?? MOCK_DATE
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return validationProblem([{ field: 'date', message: 'Use a date like 2026-10-26.' }])
+    return json(summaryOf(patient, date))
   }),
   http.get('/api/v1/patients/:patientId/medications', ({ params, request }) => {
     const patient = findPatient(params.patientId)
