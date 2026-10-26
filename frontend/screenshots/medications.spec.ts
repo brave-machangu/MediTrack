@@ -64,3 +64,17 @@ test('medication saved at 375 px', async ({ page }) => {
   await expect(page.getByText('Demo Med Zeta added.')).toBeVisible()
   await page.screenshot({ path: 'screenshots/out/medication-saved-375.png' })
 })
+
+// The confirm dialog in a real browser: the native <dialog> traps focus, Esc cancels, focus returns.
+test('stop medication dialog at 375 px, and Esc cancels it', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  const stop = page.getByRole('button', { name: 'Stop medication', exact: true }).first()
+  await stop.click()
+  const dialog = page.getByRole('dialog', { name: 'Stop Demo Med Alpha?' })
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await page.screenshot({ path: 'screenshots/out/stop-dialog-375.png' })
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(stop).toBeFocused()
+})

@@ -13,11 +13,14 @@ type Props = {
   currentYear: string | undefined
   /** Only current medications can be edited. */
   onEdit?: (() => void) | undefined
+  onStop?: (() => void) | undefined
+  /** Ref callbacks that put focus back on Edit or Stop when a form or dialog closes. */
   editRef?: ((element: HTMLElement | null) => void) | undefined
+  stopRef?: ((element: HTMLElement | null) => void) | undefined
 }
 
 /** One medication and its schedules, in plain words. */
-export function MedicationItem({ medication, timeZone, currentYear, onEdit, editRef }: Props) {
+export function MedicationItem({ medication, timeZone, currentYear, onEdit, onStop, editRef, stopRef }: Props) {
   const headingId = useId()
   const stoppedOn =
     !medication.active && medication.deactivated_at && timeZone !== undefined
@@ -62,6 +65,17 @@ export function MedicationItem({ medication, timeZone, currentYear, onEdit, edit
           </ul>
         )}
       </div>
+      {onStop === undefined ? null : (
+        <Button
+          ref={stopRef}
+          variant="quiet"
+          aria-describedby={headingId}
+          className={`${styles.quietAction ?? ''} ${styles.dangerText ?? ''}`}
+          onClick={onStop}
+        >
+          {copy.meds.stop}
+        </Button>
+      )}
     </article>
   )
 }

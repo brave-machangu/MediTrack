@@ -95,3 +95,10 @@
   justify-self: start;
   margin-inline-start: calc(-1 * (var(--space-2) + var(--border-input)));
 }
+
+/* Stop is destructive, so it reads in the danger colour; the confirm dialog still asks first. */
+/* `button.` outranks the quiet variant's own hover colour, whichever stylesheet loads first. */
+button.dangerText,
+button.dangerText:hover {
+  color: var(--color-danger);
+}

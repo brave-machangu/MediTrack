@@ -1,0 +1,60 @@
+import type { Medication } from '../../api/medications'
+import { MedicationForm } from './MedicationForm'
+import { MedicationItem } from './MedicationItem'
+import styles from './medications.module.css'
+import type { OpenForm, OpenFormState } from './useOpenForm'
+
+type Forms = Pick<OpenFormState, 'open' | 'focusIf' | 'cancel' | 'onSaved'>
+
+type Props = Forms & {
+  medications: Medication[]
+  patientId: string
+  openForm: (form: OpenForm) => void
+  timeZone: string | undefined
+  currentYear: string | undefined
+}
+
+/** The medications, with the one being edited replaced by its form. Stopped ones can't be edited or stopped. */
+export function MedicationList(props: Props) {
+  const { medications, patientId, open, focusIf, cancel, onSaved, openForm, timeZone, currentYear } = props
+  if (medications.length === 0) return null
+  return (
+    // role="list" because Safari drops list semantics when list-style is none.
+    <ul role="list" className={styles.list}>
+      {medications.map((medication) => {
+        const { id } = medication
+        const actions = medication.active
+          ? {
+              onEdit: () => {
+                openForm({ kind: 'edit', id })
+              },
+              onStop: () => {
+                openForm({ kind: 'stop', id })
+              },
+            }
+          : {}
+        return (
+          <li key={id}>
+            {open?.kind === 'edit' && open.id === id ? (
+              <MedicationForm
+                patientId={patientId}
+                medication={medication}
+                onSaved={onSaved}
+                onCancel={cancel(id)}
+              />
+            ) : (
+              <MedicationItem
+                medication={medication}
+                timeZone={timeZone}
+                currentYear={currentYear}
+                editRef={focusIf(id)}
+                stopRef={focusIf(`stop-${id}`)}
+                {...actions}
+              />
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
