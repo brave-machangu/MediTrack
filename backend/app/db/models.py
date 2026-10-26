@@ -62,6 +62,10 @@ class UtcDateTime(TypeDecorator[datetime]):
         return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
+# Services recognise a duplicate dose by this constraint's name (DESIGN.md §4).
+DOSE_LOG_UNIQUE_NAME = "uq_dose_log_schedule_time"
+
+
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
@@ -120,7 +124,7 @@ class DoseLog(Base):
     __table_args__ = (
         # Duplicate prevention (ADR-003). Its index leads with schedule_id, so schedule_id
         # needs no index of its own.
-        UniqueConstraint("schedule_id", "scheduled_for", name="uq_dose_log_schedule_time"),
+        UniqueConstraint("schedule_id", "scheduled_for", name=DOSE_LOG_UNIQUE_NAME),
         CheckConstraint(column("status").in_(["taken", "skipped"]), name="status"),
     )
 

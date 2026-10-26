@@ -10,6 +10,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from app.domain.errors import DoseNotPlanned, MedicationInactive, OutsideLogWindow
 from app.domain.types import (
     DoseRules,
     DoseStatus,
@@ -52,6 +53,26 @@ def dose_status(
 def log_window(scheduled_for: datetime, rules: DoseRules) -> tuple[datetime, datetime]:
     """First and last instant at which the dose can be logged, both inclusive."""
     return scheduled_for - rules.early_log_window, scheduled_for + rules.late_log_limit
+
+
+def is_late(scheduled_for: datetime, grace: timedelta, recorded_at: datetime) -> bool:
+    """A dose recorded after its grace period ends is late (requirements §4.2)."""
+    return recorded_at > scheduled_for + grace
+
+
+def check_can_log(
+    schedule: ScheduleRule, scheduled_for: datetime, tz: ZoneInfo, now: datetime, rules: DoseRules
+) -> None:
+    """Raises unless `scheduled_for` can be recorded at `now`. The checks run in a fixed order
+    (DESIGN.md §0): inactive medication, not a planned dose, outside the log window."""
+    if schedule.medication_deactivated_at is not None:
+        raise MedicationInactive
+    planned = planned_doses([schedule], [], tz, scheduled_for.astimezone(tz).date(), now, rules)
+    if scheduled_for not in {dose.scheduled_for for dose in planned}:
+        raise DoseNotPlanned
+    opens_at, closes_at = log_window(scheduled_for, rules)
+    if not opens_at <= now <= closes_at:
+        raise OutsideLogWindow
 
 
 def planned_doses(
