@@ -84,9 +84,7 @@ export function MissedPage() {
     <div className={styles.page}>
       <PageHeading heading={copy.missed.title} pageName={copy.nav.missed} patientName={patient.data?.display_name} />
       <Disclaimer inset />
-      {/* Remounted when the patient's today arrives, so the dates fill in. */}
       <RangeForm
-        key={today ?? 'today-loading'}
         initial={shown}
         serverErrors={refused === null ? null : { key: missed.errorUpdatedAt, errors: refused }}
         onShow={show}
