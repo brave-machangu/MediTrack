@@ -40,8 +40,8 @@ Several agents work on this repo at the same time. You stay out of their way lik
 - How to run: `uv run uvicorn …` on port **8000** (the frontend dev proxy expects `localhost:8000`)
 - Migrations: one command (`uv run alembic upgrade head`), separate from app start
 - Seed: `uv run python -m app.seed` (idempotent; includes the Probe Patient used by the alert probe). `--reset` replaces all data with the seed in one transaction (decision D1, AC-41); deploys and the nightly reset use it.
-- Every environment variable: name, meaning, default, example. Use one prefix; the database URL may follow the conventional name if you document it. No secret has a default value. The names MT-010 uses (PR #40) are `DATABASE_URL` (conventional), `APP_ENV` and `APP_VERSION` (prefix `APP_`); keep that prefix for new variables.
-- Health: `/healthz` returns the build version from a `GIT_SHA` build arg (MT-021's Dockerfile passes it into `APP_VERSION`); `/readyz` checks the database
+- Every environment variable: name, meaning, default, example. Use the `MEDITRACK_` prefix (Lead decision Q5 in `backend/DESIGN.md`): `MEDITRACK_ENV`, `MEDITRACK_VERSION`, and so on. `DATABASE_URL` keeps its conventional name. No secret has a default value.
+- Health: `/healthz` returns the build version from a `GIT_SHA` build arg (MT-021's Dockerfile passes it into `MEDITRACK_VERSION`); `/readyz` checks the database
 - Build args: `GIT_SHA`, `FAULT_DOSE_LOG_ERROR_RATE` (MT-023)
 
 Change any of these only with a note in the PR titled **"Interface change"**, so the Lead can tell the other agents.
