@@ -1,0 +1,33 @@
+# Weekly dependency updates. Every Dependabot PR goes through CI, the Reviewer
+# agent and Lead approval like any other change.
+# The uv, npm and docker entries become active once backend/ (MT-010) and
+# frontend/ (MT-020) exist; until then Dependabot reports "no manifest found".
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Python dependencies are managed with uv (pyproject.toml + uv.lock).
+  - package-ecosystem: "uv"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/backend"
+      - "/frontend"
+    schedule:
+      interval: "weekly"
