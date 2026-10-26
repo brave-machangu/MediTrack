@@ -6,13 +6,16 @@ Request models reject unknown fields (`additionalProperties: false`). The contra
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from functools import cache
 from importlib import resources
 from typing import Annotated, Self
 from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.db.repositories import ScheduleRow
+from app.services.medications import MedicationView
 
 
 @cache
@@ -32,8 +35,17 @@ def _check_timezone(name: str) -> str:
     return name
 
 
+def _reject_null(value: object) -> object:
+    if value is None:
+        raise ValueError("can't be null")
+    return value
+
+
 Timezone = Annotated[str, AfterValidator(_check_timezone)]
 DisplayName = Annotated[str, Field(min_length=1, max_length=80)]
+MedicationName = Annotated[str, Field(min_length=1, max_length=100)]
+DosageLabel = Annotated[str, Field(min_length=1, max_length=100)]
+Instructions = Annotated[str, Field(max_length=500)]
 
 
 class RequestModel(BaseModel):
@@ -61,12 +73,7 @@ class PatientUpdate(PartialUpdate):
     display_name: DisplayName | None = None
     timezone: Timezone | None = None
 
-    @field_validator("display_name", "timezone", mode="before")
-    @classmethod
-    def _not_null(cls, value: object) -> object:
-        if value is None:
-            raise ValueError("can't be null")
-        return value
+    _not_null = field_validator("display_name", "timezone", mode="before")(_reject_null)
 
 
 class PatientOut(BaseModel):
@@ -76,3 +83,70 @@ class PatientOut(BaseModel):
     display_name: str
     timezone: str
     created_at: datetime
+
+
+class MedicationCreate(RequestModel):
+    name: MedicationName
+    dosage_label: DosageLabel
+    instructions: Instructions | None = None
+
+
+class MedicationUpdate(PartialUpdate):
+    name: MedicationName | None = None
+    dosage_label: DosageLabel | None = None
+    instructions: Instructions | None = None  # nullable: null clears it
+    active: bool | None = None
+
+    _not_null = field_validator("name", "dosage_label", "active", mode="before")(_reject_null)
+
+
+class ScheduleOut(BaseModel):
+    id: UUID
+    medication_id: UUID
+    times_of_day: list[str]
+    days_of_week: list[int]
+    start_date: date
+    end_date: date | None
+    grace_period_minutes: int
+    has_dose_logs: bool
+
+    @classmethod
+    def from_row(cls, row: ScheduleRow) -> Self:
+        schedule = row.schedule
+        return cls(
+            id=schedule.id,
+            medication_id=schedule.medication_id,
+            times_of_day=schedule.times_of_day,
+            days_of_week=schedule.days_of_week,
+            start_date=schedule.start_date,
+            end_date=schedule.end_date,
+            grace_period_minutes=schedule.grace_period_minutes,
+            has_dose_logs=row.has_dose_logs,
+        )
+
+
+class MedicationOut(BaseModel):
+    id: UUID
+    patient_id: UUID
+    name: str
+    dosage_label: str
+    instructions: str | None
+    active: bool
+    deactivated_at: datetime | None
+    created_at: datetime
+    schedules: list[ScheduleOut]
+
+    @classmethod
+    def from_view(cls, view: MedicationView) -> Self:
+        medication = view.medication
+        return cls(
+            id=medication.id,
+            patient_id=medication.patient_id,
+            name=medication.name,
+            dosage_label=medication.dosage_label,
+            instructions=medication.instructions,
+            active=medication.deactivated_at is None,
+            deactivated_at=medication.deactivated_at,
+            created_at=medication.created_at,
+            schedules=[ScheduleOut.from_row(row) for row in view.schedules],
+        )

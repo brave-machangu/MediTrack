@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
-from typing import NotRequired, TypedDict
+from typing import NamedTuple, NotRequired, TypedDict
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -20,7 +20,7 @@ from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import Match, Route
 
-from app.domain.errors import DomainError, NotFound, PatientHasLogs
+from app.domain.errors import DomainError, MedicationInactive, NotFound, PatientHasLogs
 
 logger = logging.getLogger("meditrack.errors")
 
@@ -58,14 +58,22 @@ class ProblemBody(TypedDict):
     errors: NotRequired[list[FieldError]]
 
 
-# Status, code and title for every domain error (backend/DESIGN.md §4).
-DOMAIN_PROBLEMS: dict[type[DomainError], tuple[int, ErrorCode, str]] = {
-    NotFound: (404, ErrorCode.NOT_FOUND, "Not found"),
-    PatientHasLogs: (
+class Problem(NamedTuple):
+    status: int
+    code: ErrorCode
+    title: str
+    detail: str | None = None
+
+
+# The response for every domain error (backend/DESIGN.md §4).
+DOMAIN_PROBLEMS: dict[type[DomainError], Problem] = {
+    NotFound: Problem(404, ErrorCode.NOT_FOUND, "Not found"),
+    PatientHasLogs: Problem(
         409,
         ErrorCode.PATIENT_HAS_LOGS,
         "The timezone can't change after doses have been recorded",
     ),
+    MedicationInactive: Problem(409, ErrorCode.MEDICATION_INACTIVE, "Medication is inactive"),
 }
 
 
@@ -99,8 +107,8 @@ def _field_path(location: Sequence[int | str]) -> str:
 
 async def _handle_domain_error(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, DomainError)
-    status, code, title = DOMAIN_PROBLEMS[type(exc)]
-    return problem_response(status, code, title)
+    problem = DOMAIN_PROBLEMS[type(exc)]
+    return problem_response(problem.status, problem.code, problem.title, detail=problem.detail)
 
 
 async def _handle_validation(_: Request, exc: Exception) -> JSONResponse:
