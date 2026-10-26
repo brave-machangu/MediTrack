@@ -108,7 +108,7 @@ Recorded in MT-001 (2026-10-26):
 | D1 | Accounts in v1 | No accounts. Demo data resets to the synthetic seed on every deploy and nightly, and every page warns not to enter real health data. A per-visitor private workspace is a later option. |
 | D2 | Hosting | One small Linux VM running Docker Compose (dev and prod as two projects); hosted platform + managed PostgreSQL as fallback. Provider: AWS Lightsail 4 GB (US$24/month); credit terms and billing alarm in [§6.1](docs/architecture.md#61-price-check-2026-10-26). |
 | D3 | Deployed telemetry | The same Grafana stack on the VM, behind a login |
-| D4 | Investigation agent | Approved with limits: pinned model, spend-capped key stored only as a secret, report-only mode until the drill works, never merges, deploys or sees production secrets |
+| D4 | Investigation agent | Approved with limits: model pinned to `claude-sonnet-5-5` (Opus 5.5 if its investigations are weak), key with a US$20/month spend limit stored only as a secret, report-only mode until the drill works, never merges, deploys or sees production secrets. Cost per run in [operations §6.5](docs/operations.md#65-cost-per-investigation-run). |
 | D5 | Schedule overlap rule | Adopted: no two schedules of one medication on the same weekday and dates (`SCHEDULE_OVERLAP`) |
 
 Details: [docs/requirements.md §8](docs/requirements.md#8-decisions).
