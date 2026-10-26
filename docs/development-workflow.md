@@ -53,7 +53,7 @@ A task is ready when it has: an owner role, the files it may touch, acceptance c
 
 ## 6. CI checks (target state)
 
-MT-031 creates the workflow (`.github/workflows/ci.yml`) with the checks that exist at that point; each later task adds its job (contract test with MT-018, image builds with MT-021/MT-029, Compose smoke with MT-030). Every job runs on every PR, so each required check reports a status on every PR. A path filter would leave a required check waiting for a job that never ran.
+MT-031 creates the workflow (`.github/workflows/ci.yml`) with the checks that exist at that point; each later task adds its job (contract test with MT-018, Compose smoke with MT-030). The image-build job already exists: it builds `backend/Dockerfile` and `frontend/Dockerfile` as soon as MT-021 and MT-029 add them, so those agents can check their images on GitHub without local Docker. Every job runs on every PR, so each required check reports a status on every PR. A path filter would leave a required check waiting for a job that never ran.
 
 | Check | Runs on | Blocks merge |
 |---|---|---|
@@ -62,7 +62,7 @@ MT-031 creates the workflow (`.github/workflows/ci.yml`) with the checks that ex
 | Backend: integration + contract tests (PostgreSQL service) | every PR | ✓ |
 | Frontend: eslint, tsc, vitest | every PR | ✓ |
 | Generated types up to date (`npm run gen:api` produces no diff; `make gen-api` once MT-030 adds the Makefile) | every PR | ✓ |
-| Docker images build | every PR | ✓ |
+| Docker images build (`docker-build`, one job per Dockerfile; passes with a notice while the Dockerfile doesn't exist; the backend job also runs MT-021's zoneinfo check) | every PR | ✓ |
 | Compose smoke test (`/readyz`, create + log a dose) | every PR | ✓ |
 | Backend tests under a second process timezone (`TZ=America/Los_Angeles`) | every PR | ✓ |
 | Secrets and dependencies: gitleaks, `pip-audit`, `npm audit --audit-level=high` | every PR | ✓ |

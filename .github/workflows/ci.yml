@@ -257,6 +257,47 @@ jobs:
         working-directory: frontend
         run: npm audit --audit-level=high
 
+  docker-build:
+    name: Docker image builds (${{ matrix.component }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The Dockerfiles arrive with MT-021 (backend) and MT-029 (frontend). Until then this job
+      # passes with a notice, so it can be a required check from the start.
+      - name: Dockerfile present?
+        id: present
+        env:
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          if [ -f "$COMPONENT/Dockerfile" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::$COMPONENT/Dockerfile doesn't exist yet; nothing to build."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: docker build
+        if: steps.present.outputs.build == 'true'
+        env:
+          COMPONENT: ${{ matrix.component }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          args=()
+          # MT-021: the backend image reports this build arg as its version.
+          if [ "$COMPONENT" = backend ]; then args+=(--build-arg "GIT_SHA=${GIT_SHA::7}"); fi
+          docker build "${args[@]}" -t "meditrack-$COMPONENT:ci" "$COMPONENT"
+      # MT-021's verification command (backlog): timezone data works inside the image.
+      - name: Backend image has timezone data
+        if: steps.present.outputs.build == 'true' && matrix.component == 'backend'
+        run: >-
+          docker run --rm meditrack-backend:ci
+          python -c "from zoneinfo import ZoneInfo; ZoneInfo('Europe/London'); print('tz ok')"
   migrations:
     name: Migration safety (expand/contract)
     if: github.event_name == 'pull_request'
