@@ -104,3 +104,15 @@ test('schedule overlap at 375 px', async ({ page }) => {
   await expect(form.getByRole('alert')).toContainText('already has a schedule on those days')
   await form.screenshot({ path: 'screenshots/out/schedule-overlap-375.png' })
 })
+
+// Schedules with records (requirements §4.4): Change schedule and Change end date.
+for (const [name, label] of [['change-schedule', 'Change schedule'], ['end-date', 'Change end date']] as const) {
+  test(`${name} form at 375 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 900 })
+    await page.goto(pageA)
+    await page.getByRole('article', { name: 'Demo Med Alpha' }).getByRole('button', { name: label }).click()
+    const form = page.getByRole('form', { name: label })
+    await expect(form.getByRole('heading', { name: label })).toBeFocused()
+    await form.screenshot({ path: `screenshots/out/${name}-375.png` })
+  })
+}
