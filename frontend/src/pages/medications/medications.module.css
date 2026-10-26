@@ -102,3 +102,24 @@ button.dangerText,
 button.dangerText:hover {
   color: var(--color-danger);
 }
+
+.timeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: flex-end;
+}
+
+.inlineActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-5);
+}
+
+/* Two or more columns of days, read across: Monday, Tuesday / Wednesday, Thursday … */
+.days {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  column-gap: var(--space-5);
+  width: 100%;
+}

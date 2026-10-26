@@ -78,3 +78,29 @@ test('stop medication dialog at 375 px, and Esc cancels it', async ({ page }) =>
   await expect(dialog).toBeHidden()
   await expect(stop).toBeFocused()
 })
+
+// Schedule form (DESIGN.md §6.6): field errors, and the overlap message next to the form (AC-34).
+const delta = 'Demo Med Delta Extended Release Capsules'
+
+test('schedule form with errors at 375 px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  await page.getByRole('article', { name: delta }).getByRole('button', { name: 'Add a schedule' }).click()
+  const form = page.getByRole('form', { name: `Add a schedule for ${delta}` })
+  await form.getByLabel('Minutes before a dose counts as missed').fill('300')
+  await form.getByRole('button', { name: 'Save schedule' }).click()
+  await expect(form.getByRole('group', { name: 'There is a problem' })).toBeFocused()
+  await form.screenshot({ path: 'screenshots/out/schedule-form-errors-375.png' })
+})
+
+test('schedule overlap at 375 px', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(pageA)
+  await page.getByRole('article', { name: delta }).getByRole('button', { name: 'Add a schedule' }).click()
+  const form = page.getByRole('form', { name: `Add a schedule for ${delta}` })
+  await form.getByLabel('Time 1').fill('09:00')
+  await form.getByLabel('Start date').fill('2026-10-28')
+  await form.getByRole('button', { name: 'Save schedule' }).click()
+  await expect(form.getByRole('alert')).toContainText('already has a schedule on those days')
+  await form.screenshot({ path: 'screenshots/out/schedule-overlap-375.png' })
+})
