@@ -13,3 +13,7 @@ class NotFound(DomainError):
 
 class PatientHasLogs(DomainError):
     """A patient's timezone can't change once a dose has been logged (requirements §4.3)."""
+
+
+class MedicationInactive(DomainError):
+    """A deactivated medication can't be reactivated, given schedules or logged (§4.4)."""

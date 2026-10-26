@@ -56,3 +56,5 @@ plugins = ["pydantic.mypy"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q --import-mode=importlib"
+# A deprecation in a pinned library should fail the run, not scroll past.
+filterwarnings = ["error"]

@@ -19,6 +19,9 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # CHECK names are wrapped in op.f(): Alembic applies the models' naming convention
+    # ("ck_%(table_name)s_%(constraint_name)s") to operations too, so a plain name would come
+    # out as "ck_schedules_ck_schedules_...". The other conventions don't reuse the name.
     op.create_table(
         "patients",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -55,10 +58,10 @@ def upgrade() -> None:
         sa.Column("end_date", sa.Date(), nullable=True),
         sa.Column("grace_period_minutes", sa.Integer(), nullable=False),
         sa.CheckConstraint(
-            "end_date IS NULL OR end_date >= start_date", name="ck_schedules_end_after_start"
+            "end_date IS NULL OR end_date >= start_date", name=op.f("ck_schedules_end_after_start")
         ),
         sa.CheckConstraint(
-            "grace_period_minutes BETWEEN 0 AND 240", name="ck_schedules_grace_range"
+            "grace_period_minutes BETWEEN 0 AND 240", name=op.f("ck_schedules_grace_range")
         ),
         sa.ForeignKeyConstraint(
             ["medication_id"],
@@ -78,7 +81,7 @@ def upgrade() -> None:
         sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("late", sa.Boolean(), nullable=False),
         sa.Column("note", sa.String(280), nullable=True),
-        sa.CheckConstraint("status IN ('taken', 'skipped')", name="ck_dose_logs_status"),
+        sa.CheckConstraint("status IN ('taken', 'skipped')", name=op.f("ck_dose_logs_status")),
         sa.ForeignKeyConstraint(
             ["schedule_id"],
             ["schedules.id"],

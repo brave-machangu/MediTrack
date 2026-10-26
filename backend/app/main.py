@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from starlette.routing import Route
 
-from app.api import health, patients
+from app.api import health, medications, patients
 from app.api.deps import AppContext
 from app.clock import Clock, SystemClock
 from app.config import Settings
@@ -44,7 +44,7 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         session_factory=make_session_factory(engine),
     )
 
-    routers = (health.router, patients.router)
+    routers = (health.router, patients.router, medications.router)
     for router in routers:
         app.include_router(router)
     install_error_handlers(
