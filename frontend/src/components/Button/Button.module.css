@@ -47,3 +47,22 @@
   background: var(--color-accent-subtle);
   color: var(--color-accent-strong);
 }
+
+/* Looks like a link, keeps a full-size target. */
+.quiet {
+  padding-inline: var(--space-2);
+  background: transparent;
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.quiet:hover {
+  color: var(--color-accent-strong);
+  text-decoration-thickness: 2px;
+}
+
+/* Busy (e.g. "Saving…") keeps full contrast so the label stays readable. */
+.button:disabled {
+  cursor: progress;
+}

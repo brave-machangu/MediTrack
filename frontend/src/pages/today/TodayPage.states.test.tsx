@@ -85,7 +85,8 @@ describe('Today page states', () => {
     await act(() => queryClient.refetchQueries())
     // TanStack Query hands the new data to React on a later tick, so wait for what the user would see.
     await waitFor(() => {
-      expect(within(screen.getByRole('list', { name: group.attention })).getByText(copy.status.taken)).toBeInTheDocument()
+      const deltaCard = within(screen.getByRole('list', { name: group.attention })).getByRole('article', { name: delta })
+      expect(within(deltaCard).getByText(copy.status.taken)).toBeInTheDocument()
     })
     expect(namesIn(group.attention)).toEqual(['Demo Med Gamma', delta])
 

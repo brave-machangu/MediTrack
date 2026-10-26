@@ -39,3 +39,12 @@
 .error .icon {
   color: var(--color-danger);
 }
+
+.info {
+  border-left-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.info .icon {
+  color: var(--color-accent);
+}

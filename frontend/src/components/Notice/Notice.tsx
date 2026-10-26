@@ -1,10 +1,11 @@
-import { CircleAlert, TriangleAlert, type LucideIcon } from 'lucide-react'
+import { CircleAlert, Info, TriangleAlert, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import styles from './Notice.module.css'
 
-type Tone = 'warning' | 'error'
+type Tone = 'info' | 'warning' | 'error'
 
 const tones: Record<Tone, { Icon: LucideIcon; className: string | undefined; role: 'status' | 'alert' }> = {
+  info: { Icon: Info, className: styles.info, role: 'status' },
   warning: { Icon: TriangleAlert, className: styles.warning, role: 'status' },
   error: { Icon: CircleAlert, className: styles.error, role: 'alert' },
 }

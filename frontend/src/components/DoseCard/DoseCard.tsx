@@ -1,20 +1,23 @@
-import { useId } from 'react'
+import { useId, useRef } from 'react'
 import type { PlannedDose } from '../../api/doses'
 import { copy } from '../../copy'
 import { formatTime } from '../../dates'
 import { StatusBadge } from '../StatusBadge/StatusBadge'
+import { DoseActions } from './DoseActions'
 import styles from './DoseCard.module.css'
 
 type Props = {
   dose: PlannedDose
-  /** The patient's timezone, for instants such as `recorded_at`. */
+  patientId: string
+  /** The patient's timezone, for instants such as `log_window_opens_at`. */
   timeZone: string
   at: Date
 }
 
 /** One planned dose. Shows only what the API returned; it never works out a status itself. */
-export function DoseCard({ dose, timeZone, at }: Props) {
+export function DoseCard({ dose, patientId, timeZone, at }: Props) {
   const headingId = useId()
+  const headingRef = useRef<HTMLHeadingElement>(null)
   return (
     <article className={styles.card} aria-labelledby={headingId}>
       <time className={styles.time} dateTime={dose.scheduled_for}>
@@ -24,7 +27,7 @@ export function DoseCard({ dose, timeZone, at }: Props) {
         <StatusBadge status={dose.status} late={dose.late} />
       </div>
       <div className={styles.body}>
-        <h3 id={headingId} className={styles.name}>
+        <h3 id={headingId} ref={headingRef} tabIndex={-1} className={styles.name}>
           {dose.medication_name}
         </h3>
         <p>{dose.dosage_label}</p>
@@ -35,16 +38,20 @@ export function DoseCard({ dose, timeZone, at }: Props) {
           </p>
         ))}
       </div>
+      <DoseActions
+        dose={dose}
+        patientId={patientId}
+        timeZone={timeZone}
+        at={at}
+        focusHeading={() => headingRef.current?.focus()}
+      />
     </article>
   )
 }
 
+/** Notes for a dose with no record. DoseActions shows the result line of a recorded dose. */
 function statusNotes(dose: PlannedDose, timeZone: string, at: Date): string[] {
-  if (dose.status === 'taken' || dose.status === 'skipped') {
-    if (!dose.recorded_at) return []
-    const time = formatTime(dose.recorded_at, timeZone)
-    return [dose.status === 'taken' ? copy.dose.recordedTaken(time) : copy.dose.recordedSkipped(time)]
-  }
+  if (dose.status === 'taken' || dose.status === 'skipped') return []
   const notes: string[] = dose.status === 'missed' ? [copy.dose.noRecord] : []
   if (at.getTime() < Date.parse(dose.log_window_opens_at)) {
     notes.push(copy.dose.recordFrom(formatTime(dose.log_window_opens_at, timeZone)))

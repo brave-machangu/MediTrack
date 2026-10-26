@@ -54,3 +54,47 @@ for (const width of [375, 1280]) {
     await page.screenshot({ path: `screenshots/out/today-stale-${width}.png`, fullPage: true })
   })
 }
+
+// Dose cards (DESIGN.md §6.4). Element screenshots keep the files small.
+const delta = { name: 'Demo Med Delta Extended Release Capsules' }
+const cardStates = [
+  { name: 'saving', query: '?mock=record-slow', shows: 'Saving…' },
+  { name: 'not-recorded', query: '?mock=record-error', shows: 'Not recorded. Something went wrong. Please try again.' },
+  { name: 'recorded', query: '', shows: 'Taken at 09:10' },
+] as const
+
+for (const state of cardStates) {
+  test(`dose card ${state.name} at 375 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 900 })
+    await page.goto(`${todayPath}${state.query}`)
+    const card = page.getByRole('article', delta)
+    await card.getByRole('button', { name: /^Taken/ }).click()
+    await expect(card.getByText(state.shows)).toBeVisible()
+    await card.screenshot({ path: `screenshots/out/card-${state.name}-375.png` })
+  })
+}
+
+test('dose card once Undo is no longer possible (DD-2)', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-27T05:40:00Z'))
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto(todayPath)
+  const card = page.getByRole('listitem').filter({ hasText: 'Taken at 08:20' })
+  await expect(card.getByText("Undo is no longer available because this dose can't be recorded again.")).toBeVisible()
+  await card.screenshot({ path: 'screenshots/out/card-undo-closed-375.png' })
+})
+
+// AC-28 / DESIGN.md §2.3: Taken and Skipped are at least 48 px tall and at least 8 px apart.
+for (const width of [375, 1280]) {
+  test(`dose buttons are big enough and far enough apart at ${width} px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto(todayPath)
+    const card = page.getByRole('article', delta)
+    const taken = await card.getByRole('button', { name: /^Taken/ }).boundingBox()
+    const skipped = await card.getByRole('button', { name: /^Skipped/ }).boundingBox()
+    if (taken === null || skipped === null) throw new Error('dose buttons are not on screen')
+    expect(taken.height).toBeGreaterThanOrEqual(48)
+    expect(skipped.height).toBeGreaterThanOrEqual(48)
+    const gap = width < 600 ? skipped.y - (taken.y + taken.height) : skipped.x - (taken.x + taken.width)
+    expect(gap).toBeGreaterThanOrEqual(8)
+  })
+}
