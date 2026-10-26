@@ -2,7 +2,6 @@ import { ApiError } from '../../api/client'
 import { errorMessage } from '../../api/errors'
 import { copy } from '../../copy'
 import { Notice } from './Notice'
-import styles from './Notice.module.css'
 
 type Props = {
   error: unknown
@@ -23,7 +22,7 @@ export function ApiErrorNotice({ error, focusRef, prefix }: Props) {
       <p ref={focusRef} tabIndex={-1}>
         {prefix === undefined ? errorMessage(error) : `${prefix} ${errorMessage(error)}`}
       </p>
-      {traceId === undefined ? null : <p className={styles.reference}>{copy.error.supportReference(traceId)}</p>}
+      {traceId === undefined ? null : <p>{copy.error.supportReference(traceId)}</p>}
     </Notice>
   )
 }

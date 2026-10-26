@@ -27,7 +27,7 @@ export function DoseCard({ dose, patientId, timeZone, at }: Props) {
         <StatusBadge status={dose.status} late={dose.late} />
       </div>
       <div className={styles.body}>
-        <h3 id={headingId} ref={headingRef} tabIndex={-1} className={styles.name}>
+        <h3 id={headingId} ref={headingRef} tabIndex={-1}>
           {dose.medication_name}
         </h3>
         <p>{dose.dosage_label}</p>

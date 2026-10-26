@@ -34,10 +34,6 @@
   min-width: 0;
 }
 
-.name {
-  overflow-wrap: anywhere;
-}
-
 .note {
   color: var(--color-text-secondary);
 }
