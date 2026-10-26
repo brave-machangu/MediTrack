@@ -22,9 +22,12 @@ from starlette.routing import Match, Route
 
 from app.domain.errors import (
     DomainError,
+    DoseNotPlanned,
+    DuplicateDoseLog,
     InvalidField,
     MedicationInactive,
     NotFound,
+    OutsideLogWindow,
     PatientHasLogs,
     ScheduleHasLogs,
     ScheduleOverlap,
@@ -98,6 +101,11 @@ DOMAIN_PROBLEMS: dict[type[DomainError], Problem] = {
         ),
     ),
     InvalidField: Problem(422, ErrorCode.VALIDATION_ERROR, "Request is invalid"),
+    DoseNotPlanned: Problem(422, ErrorCode.DOSE_NOT_PLANNED, "No dose is planned at that time"),
+    OutsideLogWindow: Problem(
+        422, ErrorCode.OUTSIDE_LOG_WINDOW, "This dose can't be recorded at this time"
+    ),
+    DuplicateDoseLog: Problem(409, ErrorCode.DUPLICATE_DOSE_LOG, "Dose already recorded"),
 }
 
 

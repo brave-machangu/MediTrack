@@ -6,6 +6,7 @@ Request models reject unknown fields (`additionalProperties: false`). The contra
 
 from __future__ import annotations
 
+import datetime as dt
 from datetime import date, datetime
 from functools import cache
 from importlib import resources
@@ -14,6 +15,7 @@ from uuid import UUID
 
 from pydantic import (
     AfterValidator,
+    AwareDatetime,
     BaseModel,
     ConfigDict,
     Field,
@@ -23,7 +25,10 @@ from pydantic import (
 )
 
 from app.config import GRACE_PERIOD_DEFAULT_MINUTES, GRACE_PERIOD_MAX_MINUTES
+from app.db.models import DoseLog
 from app.db.repositories import ScheduleRow
+from app.domain.types import DoseStatus, LogStatus
+from app.services.doses import DayView, DoseView
 from app.services.medications import MedicationView
 
 
@@ -196,4 +201,89 @@ class MedicationOut(BaseModel):
             deactivated_at=medication.deactivated_at,
             created_at=medication.created_at,
             schedules=[ScheduleOut.from_row(row) for row in view.schedules],
+        )
+
+
+class PlannedDoseOut(BaseModel):
+    schedule_id: UUID
+    medication_id: UUID
+    medication_name: str
+    dosage_label: str
+    instructions: str | None
+    scheduled_for: datetime
+    local_date: date
+    local_time: str
+    status: DoseStatus
+    late: bool
+    log_window_opens_at: datetime
+    log_window_closes_at: datetime
+    dose_log_id: UUID | None
+    recorded_at: datetime | None
+
+    @classmethod
+    def from_view(cls, view: DoseView) -> Self:
+        dose, medication = view.dose, view.medication
+        return cls(
+            schedule_id=dose.schedule_id,
+            medication_id=dose.medication_id,
+            medication_name=medication.name,
+            dosage_label=medication.dosage_label,
+            instructions=medication.instructions,
+            scheduled_for=dose.scheduled_for,
+            local_date=dose.local_date,
+            local_time=dose.local_time,
+            status=dose.status,
+            late=dose.late,
+            log_window_opens_at=dose.log_window_opens_at,
+            log_window_closes_at=dose.log_window_closes_at,
+            dose_log_id=dose.log.dose_log_id if dose.log else None,
+            recorded_at=dose.log.recorded_at if dose.log else None,
+        )
+
+
+class DayDosesOut(BaseModel):
+    patient_id: UUID
+    date: dt.date  # `dt.` because the field itself is called `date`
+    timezone: str
+    generated_at: datetime
+    doses: list[PlannedDoseOut]
+
+    @classmethod
+    def from_view(cls, view: DayView) -> Self:
+        return cls(
+            patient_id=view.patient.id,
+            date=view.local_date,
+            timezone=view.patient.timezone,
+            generated_at=view.generated_at,
+            doses=[PlannedDoseOut.from_view(dose) for dose in view.doses],
+        )
+
+
+class DoseLogCreate(RequestModel):
+    schedule_id: UUID
+    # An instant needs an offset; a naive date-time is rejected rather than guessed.
+    scheduled_for: AwareDatetime
+    status: LogStatus
+    note: Annotated[str, Field(max_length=280)] | None = None
+
+
+class DoseLogOut(BaseModel):
+    id: UUID
+    schedule_id: UUID
+    scheduled_for: datetime
+    status: LogStatus
+    recorded_at: datetime
+    late: bool
+    note: str | None
+
+    @classmethod
+    def from_row(cls, log: DoseLog) -> Self:
+        return cls(
+            id=log.id,
+            schedule_id=log.schedule_id,
+            scheduled_for=log.scheduled_for,
+            status=LogStatus(log.status),
+            recorded_at=log.recorded_at,
+            late=log.late,
+            note=log.note,
         )

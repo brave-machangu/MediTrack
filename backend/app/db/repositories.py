@@ -5,12 +5,15 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from dataclasses import dataclass
+from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import exists, select
+import psycopg
+from sqlalchemy import UniqueConstraint, exists, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import DoseLog, Medication, Schedule
+from app.db.models import DoseLog, Medication, Patient, Schedule
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,3 +51,63 @@ def lock_medication(session: Session, medication_id: UUID) -> Medication | None:
     """
     query = select(Medication).where(Medication.id == medication_id).with_for_update()
     return session.scalars(query).one_or_none()
+
+
+def schedules_of_patient(
+    session: Session, patient_id: UUID, first: date, last: date
+) -> list[tuple[Schedule, Medication]]:
+    """The patient's schedules (with their medications) whose date range touches first..last."""
+    query = (
+        select(Schedule, Medication)
+        .join(Medication, Schedule.medication_id == Medication.id)
+        .where(
+            Medication.patient_id == patient_id,
+            Schedule.start_date <= last,
+            or_(Schedule.end_date.is_(None), Schedule.end_date >= first),
+        )
+    )
+    return [(schedule, medication) for schedule, medication in session.execute(query)]
+
+
+def dose_logs_between(
+    session: Session, schedule_ids: Collection[UUID], first: datetime, last: datetime
+) -> list[DoseLog]:
+    """Logs of these schedules for doses scheduled from first to last, both inclusive."""
+    if not schedule_ids:
+        return []
+    query = select(DoseLog).where(
+        DoseLog.schedule_id.in_(schedule_ids),
+        DoseLog.scheduled_for >= first,
+        DoseLog.scheduled_for <= last,
+    )
+    return list(session.scalars(query))
+
+
+def schedule_with_patient(
+    session: Session, schedule_id: UUID
+) -> tuple[Schedule, Medication, Patient] | None:
+    """The schedule with its medication and patient, in one statement."""
+    query = (
+        select(Schedule, Medication, Patient)
+        .join(Medication, Schedule.medication_id == Medication.id)
+        .join(Patient, Medication.patient_id == Patient.id)
+        .where(Schedule.id == schedule_id)
+    )
+    row = session.execute(query).one_or_none()
+    return None if row is None else (row[0], row[1], row[2])
+
+
+def violates_unique(error: IntegrityError, table_name: str, constraint_name: str) -> bool:
+    """Whether `error` broke this unique constraint, on PostgreSQL or SQLite."""
+    original = error.orig
+    if isinstance(original, psycopg.errors.UniqueViolation):
+        return original.diag.constraint_name == constraint_name
+    # SQLite names the columns instead: "UNIQUE constraint failed: dose_logs.a, dose_logs.b".
+    table = Schedule.metadata.tables[table_name]
+    constraint = next(
+        c
+        for c in table.constraints
+        if isinstance(c, UniqueConstraint) and c.name == constraint_name
+    )
+    columns = ", ".join(f"{table_name}.{column.name}" for column in constraint.columns)
+    return str(original) == f"UNIQUE constraint failed: {columns}"

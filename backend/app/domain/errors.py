@@ -34,3 +34,15 @@ class InvalidField(DomainError):
         super().__init__(message)
         self.field = field
         self.message = message
+
+
+class DoseNotPlanned(DomainError):
+    """The instant isn't a planned dose of the schedule (requirements §4.2, AC-16)."""
+
+
+class OutsideLogWindow(DomainError):
+    """It's too early or too late to record this dose (requirements §4.2, AC-16)."""
+
+
+class DuplicateDoseLog(DomainError):
+    """The dose is already recorded; the first record stays as it is (FR-06, AC-17)."""
