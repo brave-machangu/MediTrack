@@ -93,6 +93,11 @@ describe('errorMessage', () => {
     expect(errorMessage(await failure(request(url)))).toBe(copy.error.PATIENT_HAS_LOGS)
   })
 
+  it('shows the generic message for METHOD_NOT_ALLOWED, which only a bug could cause', async () => {
+    server.use(http.get(url, () => problem(405, 'METHOD_NOT_ALLOWED', 'Method not allowed')))
+    expect(errorMessage(await failure(request(url)))).toBe(copy.error.INTERNAL_ERROR)
+  })
+
   it('treats a code the contract does not define as an internal error', async () => {
     server.use(
       http.get(url, () => HttpResponse.json({ title: 'New', status: 409, code: 'SOMETHING_NEW' }, { status: 409 })),

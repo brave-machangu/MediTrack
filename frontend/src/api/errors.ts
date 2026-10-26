@@ -12,6 +12,8 @@ const problemMessages: Record<Problem['code'], string> = {
   MEDICATION_INACTIVE: copy.error.MEDICATION_INACTIVE,
   PATIENT_HAS_LOGS: copy.error.PATIENT_HAS_LOGS,
   SCHEDULE_OVERLAP: copy.error.SCHEDULE_OVERLAP,
+  // The UI never sends a method a path doesn't support, so this can only be a bug (prompts/frontend-agent.md).
+  METHOD_NOT_ALLOWED: copy.error.INTERNAL_ERROR,
   INTERNAL_ERROR: copy.error.INTERNAL_ERROR,
   SERVICE_UNAVAILABLE: copy.error.SERVICE_UNAVAILABLE,
 }
