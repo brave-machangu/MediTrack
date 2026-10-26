@@ -147,3 +147,18 @@ def test_other_database_error_is_internal_error(test_client: TestClient) -> None
     assert response.status_code == 500
     _assert_problem(response.json(), 500, ErrorCode.INTERNAL_ERROR)
     assert "INSERT INTO" not in response.text
+
+
+@pytest.mark.parametrize(
+    "body",
+    [bytes([0x80]), bytes([0xFF]), b"{not json"],
+    ids=["lone-continuation-byte", "lone-0xff", "malformed-json"],
+)
+def test_unreadable_body_is_a_validation_error(test_client: TestClient, body: bytes) -> None:
+    # The contract documents 422 for invalid requests, never 400 (found by the contract test).
+    response = test_client.post(
+        "/api/v1/patients", content=body, headers={"content-type": "application/json"}
+    )
+    assert response.status_code == 422
+    assert response.headers["content-type"] == "application/problem+json"
+    _assert_problem(response.json(), 422, ErrorCode.VALIDATION_ERROR)
