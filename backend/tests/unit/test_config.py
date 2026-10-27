@@ -105,3 +105,17 @@ def test_production_runs_without_a_fault(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("MEDITRACK_ENV", "production")
     monkeypatch.setenv("MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE", "0")
     assert Settings().environment == "production"
+
+
+def test_the_production_refusal_repeats_no_other_setting(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The error is printed at startup; it must not carry DATABASE_URL and its password.
+    monkeypatch.setenv(
+        "DATABASE_URL", "postgresql+psycopg://meditrack:CANARY-PASSWORD@db/meditrack"
+    )
+    monkeypatch.setenv("MEDITRACK_ENV", "production")
+    monkeypatch.setenv("MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE", "0.5")
+    with pytest.raises(ValidationError) as raised:
+        Settings()
+    message = str(raised.value)
+    assert "DATABASE_URL" not in message
+    assert "CANARY-PASSWORD" not in message

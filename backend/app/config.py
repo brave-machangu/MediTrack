@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal, Self
+from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Fixed by api/openapi.yaml (ScheduleCreate.grace_period_minutes), so not configurable.
@@ -34,9 +34,12 @@ class Settings(BaseSettings):
         default=0, ge=0, le=1, alias="MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE"
     )
 
-    @model_validator(mode="after")
-    def _no_fault_in_production(self) -> Self:
-        # The drill runs on dev; a faulty image in production fails to start instead.
-        if self.environment == "production" and self.fault_dose_log_error_rate > 0:
-            raise ValueError("MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE must be 0 in production")
-        return self
+    @field_validator("fault_dose_log_error_rate")
+    @classmethod
+    def _no_fault_in_production(cls, rate: float, info: ValidationInfo) -> float:
+        # The drill runs on dev; a faulty image in production fails to start instead. A field
+        # validator, so the error repeats only the rate, never the other settings (DATABASE_URL);
+        # `environment` is declared above, so it is already in info.data.
+        if info.data.get("environment") == "production" and rate > 0:
+            raise ValueError("must be 0 when MEDITRACK_ENV=production")
+        return rate
