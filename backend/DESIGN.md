@@ -294,7 +294,7 @@ One table in `app/errors.py` maps each `DomainError` subclass to an HTTP status,
 | MT-023 fault injection | `InjectedFault` | 500 | `INTERNAL_ERROR` |
 | Anything else, including any other `IntegrityError` | `Exception`, caught by `TelemetryMiddleware` (MT-022) | 500 | `INTERNAL_ERROR`; only the exception type is logged |
 
-The `except Exception` in `TelemetryMiddleware` (app/telemetry.py) is the only broad catch in the code base. Services catch only `IntegrityError`, and only translate it when the violated constraint is `uq_dose_log_schedule_time`: `diag.constraint_name` on psycopg, the constraint's columns in the message on SQLite. Anything else is re-raised. The exact psycopg attribute gets checked against the installed version at MT-016. Every failure rolls back, because `session.begin()` exits on the exception.
+The `except Exception` in `TelemetryMiddleware` (app/telemetry.py) is the only broad handler in the code base. `Telemetry.dose_log_attempt` also catches broadly, but only to record the attempt's outcome, and it always re-raises. Services catch only `IntegrityError`, and only translate it when the violated constraint is `uq_dose_log_schedule_time`: `diag.constraint_name` on psycopg, the constraint's columns in the message on SQLite. Anything else is re-raised. The exact psycopg attribute gets checked against the installed version at MT-016. Every failure rolls back, because `session.begin()` exits on the exception.
 
 ## 5. Hot-path query plan
 
@@ -331,7 +331,7 @@ This is the stable interface for the Platform and Frontend agents, copied into `
 | `MEDITRACK_VERSION` | Build version for `/healthz` and `service.version` | `dev` | `3f2c1a9` |
 | `MEDITRACK_EARLY_LOG_WINDOW_MINUTES` | How early a dose can be logged (requirements §4.2) | `60` | `60` |
 | `MEDITRACK_LATE_LOG_LIMIT_MINUTES` | How late a dose can still be logged | `1440` | `1440` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Standard OpenTelemetry name, read by the SDK. Unset = telemetry not exported (MT-022) | unset | `http://otel-collector:4318` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Standard OpenTelemetry name, read by `Settings`. The exporters get `<endpoint>/v1/<signal>`, built the way the SDK builds it. Unset = telemetry not exported (MT-022) | unset | `http://otel-collector:4318` |
 | `MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE` | Share (0–1) of `POST /dose-logs` that return 500, for the incident drill (MT-023) | `0` | `0.5` |
 | `MEDITRACK_TEST_POSTGRES_URL` | Tests only: PostgreSQL for integration tests. Unset → PostgreSQL-only tests **skip with a reason** | unset | `postgresql+psycopg://postgres:<password>@localhost:5433/postgres` |
 | `MEDITRACK_REQUIRE_POSTGRES` | Tests only: `1` turns those skips into failures. CI sets it, so AC-18 can't be skipped there | unset | `1` |
@@ -394,7 +394,7 @@ AC-30 (data survives a restart) is the Platform agent's Compose smoke test. `tes
 | alembic | runtime | MT-013 | Migrations (fixed choice) |
 | psycopg[binary] | runtime | MT-013 | PostgreSQL driver for `postgresql+psycopg://`; binary wheel, so the image needs no compiler or libpq headers |
 | tzdata | runtime | MT-011 | IANA data as a wheel. Windows has no system zone database (verified: `ZoneInfoNotFoundError` in the current venv), and the image doesn't depend on OS timezone packages (ADR-004) |
-| opentelemetry-api, -sdk, -exporter-otlp-proto-http, -instrumentation-fastapi, -instrumentation-sqlalchemy | runtime | MT-022 | Signals in operations §2; the exact set and privacy options are checked against current docs at MT-022 |
+| opentelemetry-api, -sdk, -exporter-otlp-proto-http, -instrumentation-fastapi, -instrumentation-sqlalchemy, -instrumentation-logging | runtime | MT-022 | Signals in operations §2. `-instrumentation-logging` provides the OTLP log handler, because the SDK's own `LoggingHandler` is deprecated in 1.45.1 (verified: it raises a `DeprecationWarning`) |
 | pytest, ruff, mypy | dev | MT-010 | Fixed stack; already in the scaffold |
 | httpx2 | dev | MT-010 | Required by `starlette.testclient` (verified: it imports `httpx2` in Starlette 1.10). Already in the scaffold |
 | pytest-cov | dev | MT-011 | Coverage gate (85 % `app/domain` + `app/services`) |
@@ -414,4 +414,6 @@ PR #40 meets most of the bar. #40 merged without item 1, so a small follow-up PR
 
 - **MT-022, privacy.** Starlette's `ServerErrorMiddleware` re-raises after the 500 handler runs, and uvicorn then logs the traceback. Pydantic and SQLAlchemy messages can contain input fragments. So the log formatter writes only the exception type and `trace_id`, never the message. AC-29 exercises a forced 500 with canary values.
 - **MT-022, X-Trace-Id on 500s.** The `Exception` handler runs in `ServerErrorMiddleware`, outside normal middleware. The header is set in the handler itself, and AC-37 tests the 500 path explicitly.
+- **MT-022, database error text in spans.** When a statement fails, the SQLAlchemy instrumentation sets the span's status description to the database's message. PostgreSQL's duplicate-key message quotes the key values, which include a schedule ID. The exporter wrapper drops every status description and keeps only allowlisted attributes, on events too.
+- **MT-022, semantic conventions.** The 0.66b1 instrumentations default to the old HTTP conventions: `http.server.duration` in ms, with the route template in `http.target` on metrics. Opting in to the stable ones (`OTEL_SEMCONV_STABILITY_OPT_IN=http`) renames both. The allowlists accept both sets of names, but dashboards would need the new names.
 - **AC-35 on Windows.** Setting `TZ` doesn't affect Python's local time on Windows the way it does on Linux. The process-timezone test is skipped there with a reason. Linux CI is the authority.
