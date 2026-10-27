@@ -8,8 +8,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Response
 
-from app.api.deps import ClockDep, DoseRulesDep, SessionDep
+from app.api.deps import ClockDep, DoseRulesDep, SessionDep, TelemetryDep
 from app.api.schemas import DayDosesOut, DoseLogCreate, DoseLogOut
+from app.errors import dose_log_failure
 from app.services import doses
 
 router = APIRouter(tags=["doses"])
@@ -28,17 +29,23 @@ def list_planned_doses(
 
 @router.post("/api/v1/dose-logs", operation_id="createDoseLog", status_code=201)
 def create_dose_log(
-    body: DoseLogCreate, session: SessionDep, clock: ClockDep, rules: DoseRulesDep
+    body: DoseLogCreate,
+    session: SessionDep,
+    clock: ClockDep,
+    rules: DoseRulesDep,
+    telemetry: TelemetryDep,
 ) -> DoseLogOut:
-    log = doses.create_dose_log(
-        session,
-        clock,
-        rules,
-        schedule_id=body.schedule_id,
-        scheduled_for=body.scheduled_for,
-        status=body.status,
-        note=body.note,
-    )
+    with telemetry.dose_log_attempt(dose_log_failure) as attempt:
+        log = doses.create_dose_log(
+            session,
+            clock,
+            rules,
+            schedule_id=body.schedule_id,
+            scheduled_for=body.scheduled_for,
+            status=body.status,
+            note=body.note,
+        )
+        attempt.late = log.late
     return DoseLogOut.from_row(log)
 
 

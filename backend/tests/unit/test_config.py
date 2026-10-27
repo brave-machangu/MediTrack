@@ -14,6 +14,7 @@ def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "MEDITRACK_VERSION",
         "MEDITRACK_EARLY_LOG_WINDOW_MINUTES",
         "MEDITRACK_LATE_LOG_LIMIT_MINUTES",
+        "OTEL_EXPORTER_OTLP_ENDPOINT",
         "APP_ENV",
         "APP_VERSION",
     ):
@@ -25,16 +26,19 @@ def test_defaults_work_without_any_environment() -> None:
     assert settings.database_url == "sqlite:///./meditrack.db"
     assert settings.environment == "local"
     assert settings.version == "dev"
+    assert settings.otlp_endpoint is None  # telemetry is not exported
 
 
 def test_reads_documented_environment_variables(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://meditrack@db/meditrack")
     monkeypatch.setenv("MEDITRACK_ENV", "dev")
     monkeypatch.setenv("MEDITRACK_VERSION", "3f2c1a9")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318")
     settings = Settings()
     assert settings.database_url == "postgresql+psycopg://meditrack@db/meditrack"
     assert settings.environment == "dev"
     assert settings.version == "3f2c1a9"
+    assert settings.otlp_endpoint == "http://otel-collector:4318"
 
 
 def test_rejects_unknown_environment(monkeypatch: pytest.MonkeyPatch) -> None:

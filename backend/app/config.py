@@ -27,3 +27,5 @@ class Settings(BaseSettings):
     late_log_limit_minutes: int = Field(
         default=1440, ge=0, alias="MEDITRACK_LATE_LOG_LIMIT_MINUTES"
     )
+    # The OTLP/HTTP base URL (the standard OpenTelemetry name). Unset: nothing is exported.
+    otlp_endpoint: str | None = Field(default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT")
