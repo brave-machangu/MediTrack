@@ -15,6 +15,7 @@ def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "MEDITRACK_EARLY_LOG_WINDOW_MINUTES",
         "MEDITRACK_LATE_LOG_LIMIT_MINUTES",
         "OTEL_EXPORTER_OTLP_ENDPOINT",
+        "MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE",
         "APP_ENV",
         "APP_VERSION",
     ):
@@ -27,6 +28,7 @@ def test_defaults_work_without_any_environment() -> None:
     assert settings.environment == "local"
     assert settings.version == "dev"
     assert settings.otlp_endpoint is None  # telemetry is not exported
+    assert settings.fault_dose_log_error_rate == 0  # no injected faults
 
 
 def test_reads_documented_environment_variables(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -76,3 +78,44 @@ def test_negative_log_window_is_rejected(monkeypatch: pytest.MonkeyPatch, name: 
     monkeypatch.setenv(name, "-1")
     with pytest.raises(ValidationError):
         Settings()
+
+
+def test_fault_rate_reads_its_environment_variable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDITRACK_ENV", "dev")
+    monkeypatch.setenv("MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE", "0.5")
+    assert Settings().fault_dose_log_error_rate == 0.5
+
+
+@pytest.mark.parametrize("rate", ["-0.1", "1.01", "half"])
+def test_fault_rate_outside_0_to_1_is_rejected(monkeypatch: pytest.MonkeyPatch, rate: str) -> None:
+    monkeypatch.setenv("MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE", rate)
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_production_refuses_an_injected_fault(monkeypatch: pytest.MonkeyPatch) -> None:
+    # operations.md §7: faulty images are for the dev drill; production must never run one.
+    monkeypatch.setenv("MEDITRACK_ENV", "production")
+    monkeypatch.setenv("MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE", "0.01")
+    with pytest.raises(ValidationError, match="MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE"):
+        Settings()
+
+
+def test_production_runs_without_a_fault(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDITRACK_ENV", "production")
+    monkeypatch.setenv("MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE", "0")
+    assert Settings().environment == "production"
+
+
+def test_the_production_refusal_repeats_no_other_setting(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The error is printed at startup; it must not carry DATABASE_URL and its password.
+    monkeypatch.setenv(
+        "DATABASE_URL", "postgresql+psycopg://meditrack:CANARY-PASSWORD@db/meditrack"
+    )
+    monkeypatch.setenv("MEDITRACK_ENV", "production")
+    monkeypatch.setenv("MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE", "0.5")
+    with pytest.raises(ValidationError) as raised:
+        Settings()
+    message = str(raised.value)
+    assert "DATABASE_URL" not in message
+    assert "CANARY-PASSWORD" not in message

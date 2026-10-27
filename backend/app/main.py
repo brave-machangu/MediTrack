@@ -22,6 +22,7 @@ from app.config import Settings
 from app.db.session import make_engine, make_session_factory
 from app.domain.types import DoseRules
 from app.errors import install_error_handlers, internal_error_response
+from app.fault import DoseLogFault
 from app.telemetry import Telemetry, instrument, setup_telemetry
 
 
@@ -61,6 +62,7 @@ def create_app(
             late_log_limit=timedelta(minutes=settings.late_log_limit_minutes),
         ),
         telemetry=telemetry,
+        dose_log_fault=DoseLogFault(rate=settings.fault_dose_log_error_rate),
     )
 
     routers = (
