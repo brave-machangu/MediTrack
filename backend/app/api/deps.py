@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.clock import Clock
 from app.config import Settings
 from app.domain.types import DoseRules
+from app.fault import DoseLogFault
 from app.telemetry import Telemetry
 
 
@@ -26,6 +27,7 @@ class AppContext:
     session_factory: sessionmaker[Session]
     dose_rules: DoseRules
     telemetry: Telemetry
+    dose_log_fault: DoseLogFault
 
 
 def get_context(request: Request) -> AppContext:
@@ -55,7 +57,12 @@ def get_telemetry(context: ContextDep) -> Telemetry:
     return context.telemetry
 
 
+def get_dose_log_fault(context: ContextDep) -> DoseLogFault:
+    return context.dose_log_fault
+
+
 SessionDep = Annotated[Session, Depends(get_session)]
 ClockDep = Annotated[Clock, Depends(get_clock)]
 DoseRulesDep = Annotated[DoseRules, Depends(get_dose_rules)]
 TelemetryDep = Annotated[Telemetry, Depends(get_telemetry)]
+DoseLogFaultDep = Annotated[DoseLogFault, Depends(get_dose_log_fault)]

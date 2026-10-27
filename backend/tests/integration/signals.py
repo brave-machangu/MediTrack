@@ -60,8 +60,11 @@ class Signals:
         return [json.loads(line) for line in self.log_lines.getvalue().splitlines() if line]
 
 
-def signals_app(database_url: str, clock: FixedClock) -> Iterator[Signals]:
-    settings = Settings(database_url=database_url, environment="test", version="test-sha")
+def signals_app(database_url: str, clock: FixedClock, **overrides: Any) -> Iterator[Signals]:
+    """`overrides` are Settings fields, e.g. fault_dose_log_error_rate=1."""
+    settings = Settings(
+        database_url=database_url, environment="test", version="test-sha", **overrides
+    )
     spans, metrics, logs, lines = (
         InMemorySpanExporter(),
         InMemoryMetricReader(),

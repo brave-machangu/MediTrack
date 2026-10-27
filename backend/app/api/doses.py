@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Response
 
-from app.api.deps import ClockDep, DoseRulesDep, SessionDep, TelemetryDep
+from app.api.deps import ClockDep, DoseLogFaultDep, DoseRulesDep, SessionDep, TelemetryDep
 from app.api.schemas import DayDosesOut, DoseLogCreate, DoseLogOut
 from app.errors import dose_log_failure
 from app.services import doses
@@ -34,8 +34,10 @@ def create_dose_log(
     clock: ClockDep,
     rules: DoseRulesDep,
     telemetry: TelemetryDep,
+    fault: DoseLogFaultDep,
 ) -> DoseLogOut:
     with telemetry.dose_log_attempt(dose_log_failure) as attempt:
+        fault.maybe_fail()  # the incident drill only (MT-023); the rate is 0 otherwise
         log = doses.create_dose_log(
             session,
             clock,

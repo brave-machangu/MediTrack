@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Fixed by api/openapi.yaml (ScheduleCreate.grace_period_minutes), so not configurable.
@@ -29,3 +29,14 @@ class Settings(BaseSettings):
     )
     # The OTLP/HTTP base URL (the standard OpenTelemetry name). Unset: nothing is exported.
     otlp_endpoint: str | None = Field(default=None, alias="OTEL_EXPORTER_OTLP_ENDPOINT")
+    # The incident drill's faulty release (MT-023): the share of POST /dose-logs that fail.
+    fault_dose_log_error_rate: float = Field(
+        default=0, ge=0, le=1, alias="MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE"
+    )
+
+    @model_validator(mode="after")
+    def _no_fault_in_production(self) -> Self:
+        # The drill runs on dev; a faulty image in production fails to start instead.
+        if self.environment == "production" and self.fault_dose_log_error_rate > 0:
+            raise ValueError("MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE must be 0 in production")
+        return self

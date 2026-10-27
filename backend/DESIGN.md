@@ -332,7 +332,7 @@ This is the stable interface for the Platform and Frontend agents, copied into `
 | `MEDITRACK_EARLY_LOG_WINDOW_MINUTES` | How early a dose can be logged (requirements §4.2) | `60` | `60` |
 | `MEDITRACK_LATE_LOG_LIMIT_MINUTES` | How late a dose can still be logged | `1440` | `1440` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Standard OpenTelemetry name, read by `Settings`. The exporters get `<endpoint>/v1/<signal>`, built the way the SDK builds it. Unset = telemetry not exported (MT-022) | unset | `http://otel-collector:4318` |
-| `MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE` | Share (0–1) of `POST /dose-logs` that return 500, for the incident drill (MT-023) | `0` | `0.5` |
+| `MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE` | Share (0–1) of `POST /dose-logs` that return 500, for the incident drill (MT-023). Set from the image's `FAULT_DOSE_LOG_ERROR_RATE` build arg; above 0 is refused when `MEDITRACK_ENV=production` | `0` | `0.5` |
 | `MEDITRACK_TEST_POSTGRES_URL` | Tests only: PostgreSQL for integration tests. Unset → PostgreSQL-only tests **skip with a reason** | unset | `postgresql+psycopg://postgres:<password>@localhost:5433/postgres` |
 | `MEDITRACK_REQUIRE_POSTGRES` | Tests only: `1` turns those skips into failures. CI sets it, so AC-18 can't be skipped there | unset | `1` |
 

@@ -60,8 +60,7 @@ Every variable uses the `MEDITRACK_` prefix, except `DATABASE_URL`, which keeps 
 | `MEDITRACK_LATE_LOG_LIMIT_MINUTES` | How long after its scheduled time a dose can still be recorded (requirements §4.2). | `1440` | `1440` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP base URL of the collector. Traces, metrics and logs go to `/v1/traces`, `/v1/metrics` and `/v1/logs` under it. Unset: nothing is exported, and trace IDs still work. | unset | `http://otel-collector:4318` |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Read by the OTLP exporters, not by `app/config.py`: headers sent to the collector, such as an auth token. When set it's a secret, so it comes from the deployment's secret store. | unset | `authorization=Basic <token>` |
-
-The fault-injection setting is added by MT-023.
+| `MEDITRACK_FAULT_DOSE_LOG_ERROR_RATE` | Share (0 to 1) of `POST /api/v1/dose-logs` that fail with 500 `INTERNAL_ERROR`, before anything is written: the incident drill's faulty release (operations.md §7). Images get it from the `FAULT_DOSE_LOG_ERROR_RATE` build arg. Must be 0 when `MEDITRACK_ENV=production`, or the app refuses to start. | `0` | `0.5` |
 
 ## Telemetry
 
