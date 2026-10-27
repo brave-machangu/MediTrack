@@ -1156,7 +1156,9 @@ The percentage is shown with one decimal place, as the API returns it ("50.0%").
 | DD-11 | A failed recording shows **Retry** + **Cancel** in place of Taken / Skipped. | Keeps one primary action on the card, and satisfies AC-36. |
 | DD-12 | No "remember last patient". `/` always shows the patient list. | Less hidden state, and nothing to explain. The prompt allows remembering but doesn't require it. |
 
-### 8.3 Rules proposed in MT-027 (for Lead approval)
+### 8.3 Rules approved after MT-027
+
+DD-13 was proposed in the MT-027 pull request (#83) and approved by the Lead on 2026-10-27.
 
 | # | Decision | Why |
 |---|---|---|
