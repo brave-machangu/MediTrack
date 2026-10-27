@@ -33,6 +33,7 @@ def create_app(
     settings = settings or Settings()
     telemetry = telemetry or setup_telemetry(settings)
     engine = make_engine(settings.database_url)
+    telemetry.trace_engine(engine)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -59,6 +60,7 @@ def create_app(
             early_log_window=timedelta(minutes=settings.early_log_window_minutes),
             late_log_limit=timedelta(minutes=settings.late_log_limit_minutes),
         ),
+        telemetry=telemetry,
     )
 
     routers = (
@@ -72,7 +74,9 @@ def create_app(
     for router in routers:
         app.include_router(router)
     install_error_handlers(
-        app, [route for router in routers for route in router.routes if isinstance(route, Route)]
+        app,
+        [route for router in routers for route in router.routes if isinstance(route, Route)],
+        telemetry,
     )
     instrument(app, telemetry, internal_error_response)
     return app

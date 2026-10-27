@@ -1,4 +1,4 @@
-"""Request-scoped dependencies: the app context, a database session and the clock."""
+"""Request-scoped dependencies: the app context, a database session, the clock and telemetry."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.clock import Clock
 from app.config import Settings
 from app.domain.types import DoseRules
+from app.telemetry import Telemetry
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +25,7 @@ class AppContext:
     engine: Engine
     session_factory: sessionmaker[Session]
     dose_rules: DoseRules
+    telemetry: Telemetry
 
 
 def get_context(request: Request) -> AppContext:
@@ -49,6 +51,11 @@ def get_dose_rules(context: ContextDep) -> DoseRules:
     return context.dose_rules
 
 
+def get_telemetry(context: ContextDep) -> Telemetry:
+    return context.telemetry
+
+
 SessionDep = Annotated[Session, Depends(get_session)]
 ClockDep = Annotated[Clock, Depends(get_clock)]
 DoseRulesDep = Annotated[DoseRules, Depends(get_dose_rules)]
+TelemetryDep = Annotated[Telemetry, Depends(get_telemetry)]

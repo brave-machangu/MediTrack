@@ -17,6 +17,8 @@ def make_engine(database_url: str) -> Engine:
         # Keeps bound values (names, notes) out of exception text, which can reach logs
         # (docs/security.md §2).
         hide_parameters=True,
+        # The pool's name in connection metrics; otherwise it's built from the database URL.
+        pool_logging_name="meditrack",
     )
     if engine.dialect.name == "sqlite":
         event.listen(engine, "connect", _enable_sqlite_foreign_keys)

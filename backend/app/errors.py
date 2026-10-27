@@ -32,7 +32,7 @@ from app.domain.errors import (
     ScheduleHasLogs,
     ScheduleOverlap,
 )
-from app.telemetry import current_trace_id, record_failure
+from app.telemetry import DoseLogOutcome, Telemetry, current_trace_id, record_failure
 
 PROBLEM_MEDIA_TYPE = "application/problem+json"
 
@@ -226,11 +226,28 @@ def _http_problem(request: Request, exc: Exception, routes: Sequence[Route]) -> 
     )
 
 
-async def _handle_database_error(request: Request, exc: Exception) -> JSONResponse:
-    unreachable = isinstance(exc, OperationalError | PoolTimeoutError) or (
+def _database_unreachable(exc: Exception) -> bool:
+    return isinstance(exc, OperationalError | PoolTimeoutError) or (
         isinstance(exc, DBAPIError) and exc.connection_invalidated
     )
-    if not unreachable:
+
+
+def dose_log_failure(exc: Exception) -> tuple[DoseLogOutcome, ErrorCode]:
+    """The outcome and `code` of a failed dose log, as the handlers here will answer it."""
+    if isinstance(exc, DomainError):
+        code = DOMAIN_PROBLEMS[type(exc)].code
+        if code is ErrorCode.DUPLICATE_DOSE_LOG:
+            return DoseLogOutcome.DUPLICATE, code
+        return DoseLogOutcome.REJECTED, code
+    if _database_unreachable(exc):
+        return DoseLogOutcome.ERROR, ErrorCode.SERVICE_UNAVAILABLE
+    return DoseLogOutcome.ERROR, ErrorCode.INTERNAL_ERROR
+
+
+def _database_problem(request: Request, exc: Exception, telemetry: Telemetry) -> JSONResponse:
+    # A request that changes data counts as a write, even if a read inside it failed.
+    telemetry.count_db_error(write=request.method not in {"GET", "HEAD"})
+    if not _database_unreachable(exc):
         return internal_error_response(request.scope, exc)
     return _problem(
         request.scope,
@@ -249,15 +266,18 @@ def internal_error_response(scope: Scope, exc: Exception) -> JSONResponse:
     )
 
 
-def install_error_handlers(app: FastAPI, routes: Sequence[Route]) -> None:
+def install_error_handlers(app: FastAPI, routes: Sequence[Route], telemetry: Telemetry) -> None:
     """`routes` are the app's routes, used to list the permitted methods on a 405."""
 
     async def handle_http(request: Request, exc: Exception) -> JSONResponse:
         return _http_problem(request, exc, routes)
 
+    async def handle_database(request: Request, exc: Exception) -> JSONResponse:
+        return _database_problem(request, exc, telemetry)
+
     app.add_exception_handler(DomainError, _handle_domain_error)
     app.add_exception_handler(RequestValidationError, _handle_validation)
     app.add_exception_handler(StarletteHTTPException, handle_http)
-    app.add_exception_handler(DBAPIError, _handle_database_error)
-    app.add_exception_handler(PoolTimeoutError, _handle_database_error)
+    app.add_exception_handler(DBAPIError, handle_database)
+    app.add_exception_handler(PoolTimeoutError, handle_database)
     # Anything else is answered by the telemetry middleware (internal_error_response).

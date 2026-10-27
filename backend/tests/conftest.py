@@ -10,6 +10,13 @@ from app.config import Settings
 from app.main import create_app
 
 
+@pytest.fixture(autouse=True)
+def _no_telemetry_export(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Settings reads the environment, so a developer's own collector setting must not make
+    # test apps export. Tests that export set an endpoint of their own.
+    monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+
+
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
     return Settings(
