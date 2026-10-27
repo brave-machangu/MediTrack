@@ -166,7 +166,7 @@ No confirmation dialog for Taken, Skipped or Undo. Undo is the safety net. There
 - Forms open in place on their page (the routes are fixed). When a form opens, focus moves to its heading; on **Cancel**, focus returns to the button that opened it.
 - Labels sit above fields, hints sit under labels, and errors sit between the hint and the field, with a 4 px red bar and `aria-invalid` / `aria-describedby`.
 - On a failed submit: an error summary at the top ("There is a problem", one link per error), focus moves to it, and everything the person typed stays.
-- Client-side checks mirror the contract: required fields, length limits (80 / 100 / 500), `HH:MM`, no duplicate times, at least one day, grace 0–240, end date on or after start date, Missed doses range ≤ 31 days. The server's `errors[].field` is mapped to a form field (`display_name`, `timezone`, `name`, `dosage_label`, `instructions`, `times_of_day[n]`, `days_of_week`, `start_date`, `end_date`, `grace_period_minutes`, and `from` / `to` for the Missed doses range, assumed because the contract doesn't name query-parameter fields). A field that doesn't map to anything on screen shows in the summary only.
+- Client-side checks mirror the contract: required fields, length limits (80 / 100 / 500), `HH:MM`, no duplicate times, at least one day, grace 0–240, end date on or after start date, Missed doses range ≤ 31 days. The server's `errors[].field` is mapped to a form field (`display_name`, `timezone`, `name`, `dosage_label`, `instructions`, `times_of_day[n]`, `days_of_week`, `start_date`, `end_date`, `grace_period_minutes`, `from` / `to` for the Missed doses range and `date` for the Daily summary: the backend names a query parameter's error after the parameter, `backend/app/errors.py`). A field that doesn't map to anything on screen shows in the summary only.
 - Success messages appear as a notice above the updated content and receive focus. They stay until the next action.
 - The grace period field is `type="text"` with `inputmode="numeric"`, not `type="number"`, which changes value when someone scrolls over it.
 - New-patient timezone is a native `<select>` of `Intl.supportedValuesOf('timeZone')` (418 zones in current browsers; it excludes the alias `UTC`). It is preselected to the browser's timezone as a suggestion only. Underscores display as spaces.
@@ -1156,7 +1156,9 @@ The percentage is shown with one decimal place, as the API returns it ("50.0%").
 | DD-11 | A failed recording shows **Retry** + **Cancel** in place of Taken / Skipped. | Keeps one primary action on the card, and satisfies AC-36. |
 | DD-12 | No "remember last patient". `/` always shows the patient list. | Less hidden state, and nothing to explain. The prompt allows remembering but doesn't require it. |
 
-### 8.3 Rules proposed in MT-027 (for Lead approval)
+### 8.3 Rules approved after MT-027
+
+DD-13 was proposed in the MT-027 pull request (#83) and approved by the Lead on 2026-10-27.
 
 | # | Decision | Why |
 |---|---|---|

@@ -26,8 +26,8 @@ export function rangeErrors({ from, to }: DateRange): RangeErrors {
 }
 
 /**
- * A 422 for the range, by field. The contract doesn't name the fields for query parameters, so `from` and `to`
- * are assumed; any other field shows in the summary only.
+ * A 422 for the range, by field. The backend names a query parameter's error after the parameter (`from`, `to`);
+ * any other field shows in the summary only.
  */
 export function serverRangeErrors(error: unknown): RangeErrors | null {
   if (!(error instanceof ApiError) || error.code !== 'VALIDATION_ERROR') return null
