@@ -10,7 +10,9 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# nginx 1.30.6 (14 Oct 2026) is a security release (five CVEs), so it doesn't wait the 14 days.
+# nginx 1.30.6 (14 Oct 2026) doesn't wait the 14 days: it's a security release, and 1.30.5 is open to
+# CVE-2026-15176, CVE-2026-93479, CVE-2026-95101, CVE-2026-97629 and CVE-2026-97205 (nginx.org CHANGES-1.30).
+# The Lead approved this exemption on #91.
 # nginx-unprivileged runs as a non-root user and listens on 8080; its pid and temp files live in /tmp.
 FROM nginx/nginx-unprivileged:1.30.6-alpine3.24@sha256:2daef144b574804198caccc4041819fa1801ecd5df2252a39646bfa2b1ff3bea
 COPY nginx.conf /etc/nginx/conf.d/default.conf
