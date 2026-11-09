@@ -14,7 +14,7 @@ RUN npm run build
 # CVE-2026-15176, CVE-2026-93479, CVE-2026-95101, CVE-2026-97629 and CVE-2026-97205 (nginx.org CHANGES-1.30).
 # The Lead approved this exemption on #91.
 # nginx-unprivileged runs as a non-root user and listens on 8080; its pid and temp files live in /tmp.
-FROM nginx/nginx-unprivileged:1.30.6-alpine3.24@sha256:2daef144b574804198caccc4041819fa1801ecd5df2252a39646bfa2b1ff3bea
+FROM nginx/nginx-unprivileged:1.31.7-alpine3.24@sha256:bc2c6cf6c2ec2ca26ee495cb23e4599adc8a5d0b90abbd5621c4605abc59ddd5
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 # A config error fails the build, so CI's image build checks nginx.conf too.
