@@ -2,7 +2,7 @@
 # Base images are pinned by digest and at least 14 days old, except security releases (docs/security.md §4).
 
 # Node 22.23.3, pushed 2026-09-23. Build stage only; nothing from it but dist/ reaches the image.
-FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS build
+FROM node:26.13.0-alpine3.24@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS build
 WORKDIR /app
 # Dependencies first, so they're cached until the lock file changes.
 COPY package.json package-lock.json ./
